@@ -7,3 +7,16 @@ HOOK=https://your-domain.com
 
 # APScheduler (optional)
 # RUN_SCHEDULER=true
+
+# Database Configuration
+# LOCAL=False  # True для SQLite, False для MySQL
+
+# MySQL Configuration (используется если LOCAL=False)
+# Обязательные:
+# NAME_DB=your_database_name
+# PASS_DB=your_mysql_password
+
+# Опциональные (определяются автоматически):
+# DB_USER=your_mysql_user  # По умолчанию = NAME_DB
+# DB_HOST=localhost        # По умолчанию localhost
+# DB_PORT=3306            # По умолчанию 3306
