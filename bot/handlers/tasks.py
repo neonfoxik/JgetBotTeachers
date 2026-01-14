@@ -461,10 +461,10 @@ def handle_task_creation_messages(message: Message) -> None:
         finally:
             clear_user_state(str(message.chat.id))
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
-    due_date_text = ""
+    due_date_text = "без срока"
     if user_state.get('due_date'):
-        due_date_text = f"\n⏰ Срок: {user_state['due_date'].strftime('%d.%m.%Y %H:%M')}"
-    text = ""
+        due_date_text = user_state['due_date'].strftime('%d.%m.%Y %H:%M')
+    text = f"👥 Выберите исполнителя задачи:\n\n📝 Название: {user_state.get('title', 'Не указано')}\n📄 Описание: {user_state.get('description', 'не указано')}\n⏰ Срок: {due_date_text}"
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("👤 Назначить себе", callback_data="assign_to_creator"))
     markup.add(InlineKeyboardButton("👥 Выбрать исполнителя", callback_data="choose_assignee"))
