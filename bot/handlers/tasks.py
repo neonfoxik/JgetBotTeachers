@@ -658,7 +658,7 @@ def skip_description_callback(call: CallbackQuery) -> None:
     user_state['description'] = None
     user_state['state'] = 'waiting_due_date'
     set_user_state(str(call.message.chat.id), user_state)
-    text = ""
+    text = "📅 Введите срок выполнения задачи в формате ДД.ММ.ГГГГ ЧЧ:ММ\n\nТекущее описание: не указано"
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("Без срока", callback_data="skip_due_date"))
     markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
