@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime, timedelta
 from django.utils import timezone
-from bot import bot
+from bot import bot, logger
 from bot.models import User, Task, Subtask, UserState
 from bot.keyboards import (
     get_task_actions_markup, get_task_confirmation_markup,
@@ -179,12 +179,14 @@ def create_task_callback(call: CallbackQuery) -> None:
     create_task_command_logic(call)
 def create_task_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
+    logger.info(f"Начало создания задачи для пользователя {chat_id}")
     user = get_or_create_user(chat_id)
     text = "📝 СОЗДАНИЕ НОВОЙ ЗАДАЧИ\n\n🎯 Введите название задачи:"
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="main_menu"))
     bot.send_message(chat_id, text, reply_markup=markup)
     set_user_state(chat_id, {'state': 'waiting_task_title'})
+    logger.info(f"Установлено состояние 'waiting_task_title' для пользователя {chat_id}")
 @bot.message_handler(commands=["close_task"])
 def close_task_command(message: Message) -> None:
     args = message.text.split()
@@ -273,11 +275,7 @@ def initiate_task_close(chat_id: str, task: Task) -> None:
             'state': 'waiting_task_report',
             'task_id': task.id
         })
-@bot.message_handler(content_types=['text', 'photo', 'document'],
-                    func=lambda message: not (message.text and message.text.startswith('/')))
 def handle_task_report(message: Message) -> None:
-    if message.text and message.text.startswith('/'):
-        return  
     user_state = get_user_state(str(message.chat.id))
     if not user_state or user_state.get('state') != 'waiting_task_report':
         return
@@ -348,12 +346,16 @@ def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_as
             text += f"\n{status} {subtask.title}{completed_date}"
     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, is_creator, is_assignee)
     bot.send_message(chat_id, text, reply_markup=markup)
-@bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))
 def handle_task_creation_messages(message: Message) -> None:
-    user_state = get_user_state(str(message.chat.id))
+    chat_id = str(message.chat.id)
+    logger.info(f"Получено сообщение от {chat_id}: '{message.text}'")
+    user_state = get_user_state(chat_id)
+    logger.info(f"Состояние пользователя {chat_id}: {user_state}")
     if not user_state:
-        return  
+        logger.info(f"Нет состояния для пользователя {chat_id}")
+        return
     state = user_state.get('state')
+    logger.info(f"Текущее состояние: {state}")
     if state == 'waiting_task_title':
         if len(message.text.strip()) < 3:
             bot.send_message(message.chat.id, "❌ Название задачи должно содержать минимум 3 символа")
