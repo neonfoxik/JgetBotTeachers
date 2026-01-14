@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 from telebot.apihelper import ApiTelegramException
 from telebot.types import Update
 from bot import bot, logger
+
 @require_GET
 def set_webhook(request: HttpRequest) -> JsonResponse:
     hook_url = settings.HOOK
