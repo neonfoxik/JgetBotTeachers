@@ -499,7 +499,7 @@ def create_task_from_state(chat_id: str, user_state: dict) -> None:
         due_date_text = "без срока"
         if task.due_date:
             due_date_text = task.due_date.strftime('%d.%m.%Y %H:%M')
-        text = f"✅ Задача успешно создана!\n\n📝 {task.title}\n📄 {task.description or 'Описание не указано'}\n👤 Исполнитель: @{task.assignee.telegram_username or task.assignee.first_name}\n⏰ Срок: {due_date_text}"
+        text = f"✅ Задача успешно создана!\n\n📝 {task.title}\n📄 {task.description or 'Описание не указано'}\n👤 Исполнитель: {task.assignee.user_name}\n⏰ Срок: {due_date_text}"
         bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
     except Exception as e:
         bot.send_message(chat_id, f"❌ Ошибка при создании задачи: {e}")
