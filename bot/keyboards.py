@@ -38,9 +38,13 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
         else:
             markup.add(btn1)
             markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
-            markup.add(InlineKeyboardButton("🗑️ Удалить", callback_data=f"task_delete_{task_id}"))
     else:
         markup.add(btn1)
+
+    # Кнопка удаления доступна для всех задач, где пользователь имеет права
+    if is_creator or is_assignee:
+        markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
+
     if report_attachments and len(report_attachments) > 0:
         btn_attachments = InlineKeyboardButton("📎 Посмотреть вложения отчета", callback_data=f"view_report_attachments_{task_id}")
         markup.add(btn_attachments)
