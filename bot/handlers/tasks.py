@@ -46,36 +46,56 @@ def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
 @bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")
 def my_created_tasks_callback(call: CallbackQuery) -> None:
-    # Проверяем, находится ли пользователь уже в разделе "мои задачи"
-    current_text = getattr(call.message, 'text', '') or getattr(call.message, 'caption', '') or ''
-    if "ЗАДАЧИ, СОЗДАННЫЕ ВАМИ" in current_text:
-        # Показываем уведомление, что пользователь уже в этом разделе
-        bot.answer_callback_query(
-            call.id,
-            "ℹ️ Вы уже находитесь в разделе 'Мои задачи'",
-            show_alert=False
-        )
-        return
+    try:
+        # Проверяем, находится ли пользователь уже в разделе "мои задачи"
+        current_text = getattr(call.message, 'text', '') or getattr(call.message, 'caption', '') or ''
+        logger.info(f"Current message text: '{current_text[:50]}...'")
 
-    chat_id = get_chat_id_from_update(call)
-    user = get_or_create_user(chat_id)
-    created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
-    if not created_tasks:
-        safe_edit_or_send_message(
+        if "ЗАДАЧИ, СОЗДАННЫЕ ВАМИ" in current_text:
+            # Показываем уведомление, что пользователь уже в этом разделе
+            logger.info("User already in my tasks section, showing notification")
+            bot.answer_callback_query(
+                call.id,
+                "ℹ️ Вы уже находитесь в разделе 'Мои задачи'",
+                show_alert=False
+            )
+            return
+
+        logger.info("User not in my tasks section, loading tasks...")
+        chat_id = get_chat_id_from_update(call)
+        user = get_or_create_user(chat_id)
+        created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
+
+        if not created_tasks:
+            logger.info("No tasks found, editing message")
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                text="📋 Вы еще не создали ни одной задачи",
+                reply_markup=TASK_MANAGEMENT_MARKUP,
+                message_id=call.message.message_id
+            )
+            return
+
+        text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
+        markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
+
+        logger.info("Editing message with tasks list")
+        bot.edit_message_text(
             chat_id=call.message.chat.id,
-            text="📋 Вы еще не создали ни одной задачи",
-            reply_markup=TASK_MANAGEMENT_MARKUP,
+            text=text,
+            reply_markup=markup,
             message_id=call.message.message_id
         )
-        return
-    text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
-    markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
-    safe_edit_or_send_message(
-        chat_id=call.message.chat.id,
-        text=text,
-        reply_markup=markup,
-        message_id=call.message.message_id
-    )
+        logger.info("Message edited successfully")
+
+    except Exception as e:
+        logger.error(f"Error in my_created_tasks_callback: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        try:
+            bot.answer_callback_query(call.id, "Произошла ошибка", show_alert=True)
+        except:
+            pass
 def my_created_tasks_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     user = get_or_create_user(chat_id)
@@ -88,8 +108,8 @@ def my_created_tasks_command_logic(update) -> None:
         markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
 
     # Если это callback (есть message в update), редактируем сообщение
-    if hasattr(update, 'message') and update.message:
-        safe_edit_or_send_message(
+    if hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+        bot.edit_message_text(
             chat_id=chat_id,
             text=text,
             reply_markup=markup,

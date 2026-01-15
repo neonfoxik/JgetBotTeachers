@@ -86,6 +86,7 @@ def my_created_tasks_callback(call: CallbackQuery) -> None:
         )
         return
 
+    # Вызываем логику напрямую с передачей callback объекта
     my_created_tasks_command_logic(call)
 
 
@@ -103,10 +104,17 @@ def my_created_tasks_command_logic(update) -> None:
         text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
         markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
 
-    if hasattr(update, 'message'):
-        bot.send_message(chat_id, text, reply_markup=markup)
+    # Если это callback (есть message в update), редактируем сообщение
+    if hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+        bot.edit_message_text(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=markup,
+            message_id=update.message.message_id
+        )
     else:
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
+        # Если это команда, отправляем новое сообщение
+        bot.send_message(chat_id, text, reply_markup=markup)
 
 
 # Обработчик create_task перенесен в tasks.py для избежания дублирования
