@@ -8,7 +8,7 @@ from bot.keyboards import (
     get_task_actions_markup, get_subtask_toggle_markup,
     TASK_MANAGEMENT_MARKUP
 )
-from telebot.types import CallbackQuery
+from telebot.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
