@@ -17,7 +17,10 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
     btn1 = InlineKeyboardButton("📊 Прогресс", callback_data=f"task_progress_{task_id}")
     if is_assignee and task_status in ['active', 'pending_review']:
         if task_status == 'active':
-            btn2 = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task_id}")
+            if is_creator:
+                btn2 = InlineKeyboardButton("✅ Отметить выполненной", callback_data=f"task_complete_{task_id}")
+            else:
+                btn2 = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task_id}")
         else:
             btn2 = InlineKeyboardButton("⏳ Ожидает проверки", callback_data=f"task_status_{task_id}")
         markup.add(btn1, btn2)

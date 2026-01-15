@@ -567,6 +567,33 @@ def task_close_callback(call: CallbackQuery) -> None:
         initiate_task_close(chat_id, task)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+@bot.callback_query_handler(func=lambda c: c.data.startswith("task_complete_"))
+def task_complete_callback(call: CallbackQuery) -> None:
+    try:
+        task_id = int(call.data.split('_')[2])
+        task = Task.objects.get(id=task_id)
+        chat_id = get_chat_id_from_update(call)
+        user = get_or_create_user(chat_id)
+        is_creator = task.creator.telegram_id == user.telegram_id
+        is_assignee = task.assignee.telegram_id == user.telegram_id
+        if not (is_creator and is_assignee):
+            bot.answer_callback_query(call.id, "У вас нет прав для выполнения этого действия", show_alert=True)
+            return
+        if task.status != 'active':
+            bot.answer_callback_query(call.id, "Задача уже обработана", show_alert=True)
+            return
+        task.status = 'completed'
+        task.closed_at = timezone.now()
+        task.save()
+        try:
+            from bot.schedulers import unschedule_task_reminder
+            unschedule_task_reminder(task.id)
+        except Exception as e:
+            print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
+        bot.answer_callback_query(call.id, "✅ Задача отмечена как выполненная!")
+        show_task_progress(call.message.chat.id, task, is_creator, is_assignee)
+    except (ValueError, ObjectDoesNotExist):
+        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 @bot.callback_query_handler(func=lambda c: c.data.startswith("task_confirm_"))
 def task_confirm_callback(call: CallbackQuery) -> None:
     try:
