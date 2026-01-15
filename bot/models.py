@@ -11,6 +11,13 @@ class User(models.Model):
         max_length=100,
         verbose_name='Имя пользователя'
     )
+    first_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Имя',
+        help_text='Имя пользователя из Telegram'
+    )
     is_admin = models.BooleanField(
         default=False,
         verbose_name='Администратор'
