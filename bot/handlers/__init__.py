@@ -1,6 +1,6 @@
 # Импорты из новых модулей
 from .commands import (
-    start_command, tasks_command, my_created_tasks_command, create_task_command,
+    start_command, tasks_command, my_created_tasks_command,
     close_task_command, task_progress_command, debug_command
 )
 from .task_actions import (

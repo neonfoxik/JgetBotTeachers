@@ -61,15 +61,25 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
 def handle_task_creation_messages(message: Message) -> None:
     chat_id = str(message.chat.id)
     logger.info(f"Получено сообщение от {chat_id}: '{message.text}'")
-    user_state = get_user_state(chat_id)
-    logger.info(f"Состояние пользователя {chat_id}: {user_state}")
-    if not user_state:
-        logger.info(f"Нет состояния для пользователя {chat_id}")
-        return
-    state = user_state.get('state')
-    logger.info(f"Текущее состояние: {state}")
+    
+    try:
+        user_state = get_user_state(chat_id)
+        logger.info(f"Состояние пользователя {chat_id}: {user_state}")
+        
+        # Проверяем, есть ли состояние и оно связано с созданием задачи
+        if not user_state or not user_state.get('state'):
+            logger.info(f"Нет активного состояния создания задачи для пользователя {chat_id}")
+            return
+        
+        state = user_state.get('state')
+        logger.info(f"Текущее состояние: {state}")
+        
+        # Проверяем, что состояние относится к созданию задачи
+        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_due_date']:
+            logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
+            return
 
-    if state == 'waiting_task_title':
+        if state == 'waiting_task_title':
         if len(message.text.strip()) < 3:
             bot.send_message(message.chat.id, "❌ Название задачи должно содержать минимум 3 символа")
             return
@@ -107,6 +117,12 @@ def handle_task_creation_messages(message: Message) -> None:
         user_state['state'] = 'waiting_assignee_selection'
         set_user_state(str(message.chat.id), user_state)
         show_assignee_selection_menu(str(message.chat.id), user_state)
+    
+    except Exception as e:
+        logger.error(f"Ошибка при обработке сообщения создания задачи для {chat_id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        bot.send_message(chat_id, "❌ Произошла ошибка при обработке сообщения. Попробуйте начать создание задачи заново.")
 
 
 @bot.callback_query_handler(func=lambda c: c.data == "skip_description")

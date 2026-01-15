@@ -87,25 +87,7 @@ def my_created_tasks_command_logic(update) -> None:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
 
 
-@bot.message_handler(commands=["create_task"])
-def create_task_command(message: Message) -> None:
-    create_task_command_logic(message)
-
-
-@bot.callback_query_handler(func=lambda c: c.data == "create_task")
-def create_task_callback(call: CallbackQuery) -> None:
-    create_task_command_logic(call)
-
-
-def create_task_command_logic(update) -> None:
-    chat_id = get_chat_id_from_update(update)
-    text = "📝 Создание новой задачи\n\nВведите название задачи:"
-    markup = None
-
-    if hasattr(update, 'message'):
-        bot.send_message(chat_id, text, reply_markup=markup)
-    else:
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
+# Обработчик create_task перенесен в tasks.py для избежания дублирования
 
 
 @bot.message_handler(commands=["close_task"])

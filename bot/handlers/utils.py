@@ -43,17 +43,61 @@ def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, messag
 def get_user_state(chat_id) -> dict:
     try:
         user_state = UserState.objects.get(user__telegram_id=chat_id)
-        return json.loads(user_state.data)
+        # Возвращаем словарь с полями state и data
+        result = {
+            'state': user_state.state or '',  # state всегда из поля модели
+        }
+        # Если data - это строка JSON, парсим её, иначе используем как есть
+        if isinstance(user_state.data, str):
+            try:
+                data_dict = json.loads(user_state.data)
+                # Обновляем result данными из data, но state не перезаписываем
+                for key, value in data_dict.items():
+                    if key != 'state':  # Не перезаписываем state из data
+                        result[key] = value
+            except (json.JSONDecodeError, TypeError):
+                if user_state.data:
+                    result['data'] = user_state.data
+        elif isinstance(user_state.data, dict):
+            # Обновляем result данными из data, но state не перезаписываем
+            for key, value in user_state.data.items():
+                if key != 'state':  # Не перезаписываем state из data
+                    result[key] = value
+        else:
+            if user_state.data:
+                result['data'] = user_state.data
+        return result
     except UserState.DoesNotExist:
+        return {}
+    except Exception as e:
+        logger.error(f"Ошибка при получении состояния пользователя {chat_id}: {e}")
         return {}
 
 
 def set_user_state(chat_id, state_data: dict) -> None:
-    state_json = json.dumps(state_data, default=str)
-    user = User.objects.get(telegram_id=chat_id)
+    # Создаем копию, чтобы не изменять исходный словарь
+    state_data_copy = state_data.copy() if state_data else {}
+    
+    # Извлекаем state из словаря, остальное идет в data
+    current_state = state_data_copy.pop('state', None)
+    if current_state is None:
+        # Если state не указан, пытаемся получить текущий
+        try:
+            existing = UserState.objects.get(user__telegram_id=chat_id)
+            current_state = existing.state
+        except UserState.DoesNotExist:
+            current_state = ''
+    
+    # Остальные данные сохраняем в data
+    data_to_save = state_data_copy
+    
+    user = get_or_create_user(chat_id)
     UserState.objects.update_or_create(
         user=user,
-        defaults={'data': state_json}
+        defaults={
+            'state': current_state,
+            'data': data_to_save
+        }
     )
 
 

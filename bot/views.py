@@ -1,7 +1,7 @@
 from traceback import format_exc
 from asgiref.sync import sync_to_async
 from bot.handlers import (
-    start_command, tasks_command, my_created_tasks_command, create_task_command,
+    start_command, tasks_command, my_created_tasks_command,
     close_task_command, task_progress_command, debug_command, handle_task_creation_messages,
     handle_task_report, skip_description_callback,
     skip_due_date_callback, cancel_task_creation_callback
@@ -65,7 +65,6 @@ def register_handlers():
     bot.message_handler(commands=["start"])(start_command)
     bot.message_handler(commands=["tasks"])(tasks_command)
     bot.message_handler(commands=["my_created_tasks"])(my_created_tasks_command)
-    bot.message_handler(commands=["create_task"])(create_task_command)
     bot.message_handler(commands=["close_task"])(close_task_command)
     bot.message_handler(commands=["task_progress"])(task_progress_command)
     bot.message_handler(commands=["debug"])(debug_command)
