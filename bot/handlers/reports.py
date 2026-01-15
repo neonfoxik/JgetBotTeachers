@@ -8,7 +8,7 @@ from bot.models import User, Task
 from bot.keyboards import (
     get_task_actions_markup, TASK_MANAGEMENT_MARKUP
 )
-from telebot.types import Message
+from telebot.types import Message, CallbackQuery
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
