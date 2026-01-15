@@ -1223,6 +1223,11 @@ def change_assignee_callback(call: CallbackQuery) -> None:
                              reply_markup=markup, message_id=call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Ошибка при смене исполнителя", show_alert=True)
+@bot.callback_query_handler(func=lambda c: c.data == "main_menu")
+def main_menu_callback(call: CallbackQuery) -> None:
+    text = "🏠 Главное меню"
+    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+
 @bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")
 def cancel_task_creation_callback(call: CallbackQuery) -> None:
     clear_user_state(str(call.message.chat.id))

@@ -14,6 +14,13 @@ UNIVERSAL_BUTTONS.add(InlineKeyboardButton("⬅️ Назад", callback_data="m
 def get_task_actions_markup(task_id: int, task_status: str = None, report_attachments: list = None,
                           is_creator: bool = False, is_assignee: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
+
+    # Для завершенных задач показываем только кнопки удаления и возврата в главное меню
+    if task_status == 'completed':
+        markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
+        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
+        return markup
+
     btn1 = InlineKeyboardButton("📊 Прогресс", callback_data=f"task_progress_{task_id}")
     if is_assignee and task_status in ['active', 'pending_review']:
         if task_status == 'active':
