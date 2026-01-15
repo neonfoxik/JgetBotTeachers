@@ -46,6 +46,17 @@ def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
 @bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")
 def my_created_tasks_callback(call: CallbackQuery) -> None:
+    # Проверяем, находится ли пользователь уже в разделе "мои задачи"
+    current_text = getattr(call.message, 'text', '') or getattr(call.message, 'caption', '') or ''
+    if "ЗАДАЧИ, СОЗДАННЫЕ ВАМИ" in current_text:
+        # Показываем уведомление, что пользователь уже в этом разделе
+        bot.answer_callback_query(
+            call.id,
+            "ℹ️ Вы уже находитесь в разделе 'Мои задачи'",
+            show_alert=False
+        )
+        return
+
     chat_id = get_chat_id_from_update(call)
     user = get_or_create_user(chat_id)
     created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
@@ -71,11 +82,22 @@ def my_created_tasks_command_logic(update) -> None:
     created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
     if not created_tasks:
         text = "📋 Вы еще не создали ни одной задачи"
-        bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
-        return
-    text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
-    markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
-    bot.send_message(chat_id, text, reply_markup=markup)
+        markup = TASK_MANAGEMENT_MARKUP
+    else:
+        text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
+        markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
+
+    # Если это callback (есть message в update), редактируем сообщение
+    if hasattr(update, 'message') and update.message:
+        safe_edit_or_send_message(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=markup,
+            message_id=update.message.message_id
+        )
+    else:
+        # Если это команда, отправляем новое сообщение
+        bot.send_message(chat_id, text, reply_markup=markup)
 def create_task_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     logger.info(f"Начало создания задачи для пользователя {chat_id}")

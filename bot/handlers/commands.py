@@ -75,6 +75,17 @@ def my_created_tasks_command(message: Message) -> None:
 
 
 def my_created_tasks_callback(call: CallbackQuery) -> None:
+    # Проверяем, находится ли пользователь уже в разделе "мои задачи"
+    current_text = getattr(call.message, 'text', '') or getattr(call.message, 'caption', '') or ''
+    if "ЗАДАЧИ, СОЗДАННЫЕ ВАМИ" in current_text:
+        # Показываем уведомление, что пользователь уже в этом разделе
+        bot.answer_callback_query(
+            call.id,
+            "ℹ️ Вы уже находитесь в разделе 'Мои задачи'",
+            show_alert=False
+        )
+        return
+
     my_created_tasks_command_logic(call)
 
 
@@ -86,10 +97,10 @@ def my_created_tasks_command_logic(update) -> None:
     created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
 
     if not created_tasks:
-        text = "📋 Вы не создали ни одной задачи"
+        text = "📋 Вы еще не создали ни одной задачи"
         markup = TASK_MANAGEMENT_MARKUP
     else:
-        text = f"📋 ВАШИ СОЗДАННЫЕ ЗАДАЧИ\n\n"
+        text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
         markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
 
     if hasattr(update, 'message'):
