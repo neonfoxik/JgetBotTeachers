@@ -8,20 +8,33 @@ from telebot.types import Message, CallbackQuery
 from django.core.exceptions import ObjectDoesNotExist
 
 
-@bot.message_handler(commands=["start"])
+# Декоратор удален - обработчик регистрируется в views.py через register_handlers()
 def start_command(message: Message) -> None:
-    chat_id = str(message.chat.id)
-    user = get_or_create_user(
-        telegram_id=chat_id,
-        telegram_username=message.from_user.username,
-        first_name=message.from_user.first_name
-    )
+    try:
+        chat_id = str(message.chat.id)
+        logger.info(f"Обработчик /start вызван для пользователя {chat_id}")
+        
+        user = get_or_create_user(
+            telegram_id=chat_id,
+            telegram_username=message.from_user.username,
+            first_name=message.from_user.first_name
+        )
+        logger.info(f"Пользователь получен/создан: {user.user_name}")
 
-    welcome_text = f"""👋 Привет, {user.first_name or user.user_name}!
+        welcome_text = f"""👋 Привет, {user.first_name or user.user_name}!
 
 🤖 Я бот для управления задачами. Выберите действие:"""
 
-    bot.send_message(chat_id, welcome_text, reply_markup=main_markup)
+        bot.send_message(chat_id, welcome_text, reply_markup=main_markup)
+        logger.info(f"Приветственное сообщение отправлено пользователю {chat_id}")
+    except Exception as e:
+        logger.error(f"Ошибка в обработчике /start: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        try:
+            bot.send_message(message.chat.id, "❌ Произошла ошибка. Попробуйте позже.")
+        except:
+            pass
 
 
 @bot.message_handler(commands=["tasks"])

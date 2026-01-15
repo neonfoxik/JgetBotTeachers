@@ -19,15 +19,8 @@ from telebot.types import (
 )
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
-@bot.message_handler(commands=["start"])
-def start_command(message: Message) -> None:
-    user = get_or_create_user(
-        telegram_id=str(message.chat.id),
-        telegram_username=message.from_user.username,
-        first_name=message.from_user.first_name
-    )
-    welcome_text = f"👋 Добро пожаловать, {user.user_name}!\n\nЯ бот для управления задачами. Выберите действие:"
-    bot.send_message(message.chat.id, welcome_text, reply_markup=main_markup)
+
+# Обработчик /start перенесен в commands.py для избежания дублирования
 def get_chat_id_from_update(update) -> str:
     if hasattr(update, 'chat'):
         return str(update.chat.id)

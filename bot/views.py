@@ -91,15 +91,26 @@ def index(request: HttpRequest) -> JsonResponse:
         logger.error(f"Critical error in index view: {e} {format_exc()}")
         return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 def register_handlers():
-    bot.message_handler(commands=["start"])(start_command)
-    bot.message_handler(commands=["tasks"])(tasks_command)
-    bot.message_handler(commands=["my_created_tasks"])(my_created_tasks_command)
-    bot.message_handler(commands=["close_task"])(close_task_command)
-    bot.message_handler(commands=["task_progress"])(task_progress_command)
-    bot.message_handler(commands=["debug"])(debug_command)
-    bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))(handle_task_creation_messages)
-    bot.message_handler(content_types=['text', 'photo', 'document'])(handle_task_report)
-    bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
-    bot.callback_query_handler(func=lambda c: c.data == "skip_due_date")(skip_due_date_callback)
-    bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
+    logger.info("Регистрация обработчиков бота...")
+    try:
+        bot.message_handler(commands=["start"])(start_command)
+        logger.info("Обработчик /start зарегистрирован")
+        bot.message_handler(commands=["tasks"])(tasks_command)
+        logger.info("Обработчик /tasks зарегистрирован")
+        bot.message_handler(commands=["my_created_tasks"])(my_created_tasks_command)
+        bot.message_handler(commands=["close_task"])(close_task_command)
+        bot.message_handler(commands=["task_progress"])(task_progress_command)
+        bot.message_handler(commands=["debug"])(debug_command)
+        bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))(handle_task_creation_messages)
+        bot.message_handler(content_types=['text', 'photo', 'document'])(handle_task_report)
+        bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
+        bot.callback_query_handler(func=lambda c: c.data == "skip_due_date")(skip_due_date_callback)
+        bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
+        logger.info("Все обработчики успешно зарегистрированы")
+    except Exception as e:
+        logger.error(f"Ошибка при регистрации обработчиков: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+# Регистрируем обработчики при загрузке модуля
 register_handlers()
