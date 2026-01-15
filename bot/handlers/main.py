@@ -2,6 +2,7 @@ from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
     check_permissions, show_task_progress
 )
+from bot.handlers.commands import tasks_command_logic
 from bot import bot, logger
 from bot.models import User, Task, Subtask
 from bot.keyboards import (

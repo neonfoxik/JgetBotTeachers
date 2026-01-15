@@ -27,24 +27,10 @@ def create_task_command(message: Message) -> None:
 
 def create_task_callback(call: CallbackQuery) -> None:
     create_task_command_logic(call)
-def tasks_command_logic(update) -> None:
-    chat_id = get_chat_id_from_update(update)
-    user = get_or_create_user(chat_id)
-    active_tasks = Task.objects.filter(
-        assignee=user,
-        status__in=['active', 'pending_review']
-    ).order_by('due_date', '-created_at')
-    if not active_tasks:
-        text = "📋 У вас нет активных задач"
-        bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
-        return
-    text = f"📋 ВАШИ АКТИВНЫЕ ЗАДАЧИ\n\n"
-    markup = get_tasks_list_markup(active_tasks, is_creator_view=False)
-    bot.send_message(chat_id, text, reply_markup=markup)
-@bot.message_handler(commands=["my_created_tasks"])
+
 def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
-@bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")
+
 def my_created_tasks_callback(call: CallbackQuery) -> None:
     try:
         # Проверяем, находится ли пользователь уже в разделе "мои задачи"

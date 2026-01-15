@@ -5,7 +5,8 @@ from .commands import (
     tasks_callback, my_created_tasks_callback
 )
 from .tasks import (
-    create_task_command, create_task_callback
+    create_task_command, create_task_callback,
+    my_created_tasks_command, my_created_tasks_callback
 )
 from .task_actions import (
     task_view_callback, task_progress_callback, task_complete_callback,
@@ -28,5 +29,5 @@ from .reports import (
     handle_task_report, view_report_attachments_callback
 )
 from .main import (
-    show_task_progress, tasks_back_callback, main_menu_callback
+    show_task_progress, tasks_back_callback, main_menu_callback, tasks_command_logic
 ) 
