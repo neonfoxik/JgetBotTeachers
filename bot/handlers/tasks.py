@@ -393,7 +393,7 @@ def handle_task_report(message: Message) -> None:
         bot.send_message(message.chat.id, f"❌ Ошибка при отправке отчета: {e}")
     finally:
         clear_user_state(str(message.chat.id))
-def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_assignee: bool = False) -> None:
+def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_assignee: bool = False, message_id: int = None) -> None:
     text = format_task_info(task, show_details=True)
     subtasks = task.subtasks.all()
     if subtasks:
@@ -403,7 +403,7 @@ def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_as
             completed_date = f" ({subtask.completed_at.strftime('%d.%m.%Y')})" if subtask.completed_at else ""
             text += f"\n{status} {subtask.title}{completed_date}"
     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, is_creator, is_assignee)
-    bot.send_message(chat_id, text, reply_markup=markup)
+    safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id)
 def handle_task_creation_messages(message: Message) -> None:
     chat_id = str(message.chat.id)
     logger.info(f"Получено сообщение от {chat_id}: '{message.text}'")
@@ -582,7 +582,7 @@ def task_view_callback(call: CallbackQuery) -> None:
         user = get_or_create_user(chat_id)
         is_creator = task.creator.telegram_id == user.telegram_id
         is_assignee = task.assignee.telegram_id == user.telegram_id
-        show_task_progress(call.message.chat.id, task, is_creator, is_assignee)
+        show_task_progress(call.message.chat.id, task, is_creator, is_assignee, call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
     except Exception as e:
@@ -979,7 +979,9 @@ def task_delete_callback(call: CallbackQuery) -> None:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
         chat_id = get_chat_id_from_update(call)
-        allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
+        # Для завершенных задач удаление могут делать создатель и исполнитель
+        require_creator_only = task.status != 'completed'
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=require_creator_only)
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
@@ -999,7 +1001,9 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
         chat_id = get_chat_id_from_update(call)
-        allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
+        # Для завершенных задач удаление могут делать создатель и исполнитель
+        require_creator_only = task.status != 'completed'
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=require_creator_only)
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
