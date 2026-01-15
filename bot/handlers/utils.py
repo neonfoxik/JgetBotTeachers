@@ -42,22 +42,23 @@ def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, messag
 
 def get_user_state(chat_id) -> dict:
     try:
-        user_state = UserState.objects.get(telegram_id=chat_id)
-        return json.loads(user_state.state_data)
+        user_state = UserState.objects.get(user__telegram_id=chat_id)
+        return json.loads(user_state.data)
     except UserState.DoesNotExist:
         return {}
 
 
 def set_user_state(chat_id, state_data: dict) -> None:
     state_json = json.dumps(state_data, default=str)
+    user = User.objects.get(telegram_id=chat_id)
     UserState.objects.update_or_create(
-        telegram_id=chat_id,
-        defaults={'state_data': state_json}
+        user=user,
+        defaults={'data': state_json}
     )
 
 
 def clear_user_state(chat_id) -> None:
-    UserState.objects.filter(telegram_id=chat_id).delete()
+    UserState.objects.filter(user__telegram_id=chat_id).delete()
 
 
 def get_or_create_user(telegram_id: str, telegram_username: str = None, first_name: str = None) -> User:
