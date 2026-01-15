@@ -32,7 +32,9 @@ def start_command(message: Message) -> None:
         import traceback
         logger.error(traceback.format_exc())
         try:
-            bot.send_message(message.chat.id, "❌ Произошла ошибка. Попробуйте позже.")
+            # Используем chat_id если он определен, иначе message.chat.id
+            error_chat_id = chat_id if 'chat_id' in locals() else str(message.chat.id)
+            bot.send_message(error_chat_id, "❌ Произошла ошибка. Попробуйте позже.")
         except:
             pass
 

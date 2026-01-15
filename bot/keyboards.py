@@ -78,8 +78,16 @@ def get_user_selection_markup(users, page: int = 0, users_per_page: int = 5) -> 
     nav_buttons = []
     if page > 0:
         nav_buttons.append(InlineKeyboardButton("⬅️ Назад", callback_data=f"user_page_{page-1}"))
-    total_users = users.count() if hasattr(users, 'count') else len(users)
-    total_pages = (total_users + users_per_page - 1) // users_per_page
+    # Проверяем тип users - если это QuerySet, используем count(), иначе len()
+    # QuerySet имеет метод count() без аргументов, список - нет
+    if hasattr(users, 'count') and not isinstance(users, list):
+        try:
+            total_users = users.count()
+        except (TypeError, AttributeError):
+            total_users = len(users)
+    else:
+        total_users = len(users)
+    total_pages = (total_users + users_per_page - 1) // users_per_page if total_users > 0 else 1
     if page < total_pages - 1:
         nav_buttons.append(InlineKeyboardButton("Вперёд ➡️", callback_data=f"user_page_{page+1}"))
     if nav_buttons:

@@ -158,18 +158,9 @@ def create_task_command_logic(update) -> None:
     is_creator = task.creator.telegram_id == user.telegram_id
     is_assignee = task.assignee.telegram_id == user.telegram_id
     show_task_progress(chat_id, task, is_creator, is_assignee)
+
 # Обработчик debug перенесен в commands.py
-    user = get_or_create_user(str(message.chat.id))
-    state_info = "Нет активного состояния"
-    if hasattr(bot, 'user_states') and message.chat.id in bot.user_states:
-        state_info = f"Состояние: {bot.user_states[message.chat.id]}"
-    text = f"""🐛 ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
-👤 Пользователь: {user.user_name} ({user.telegram_id})
-🔧 {state_info}
-📊 Статистика:
-• Активных задач: {Task.objects.filter(assignee=user, status='active').count()}
-• Созданных задач: {Task.objects.filter(creator=user).count()}"""
-    bot.send_message(message.chat.id, text)
+
 def initiate_task_close(chat_id: str, task: Task) -> None:
     if task.status not in ['active', 'pending_review']:
         bot.send_message(chat_id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'")
