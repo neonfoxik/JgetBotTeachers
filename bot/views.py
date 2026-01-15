@@ -14,7 +14,7 @@ from bot.handlers import (
     task_delete_callback, confirm_delete_callback, task_status_callback,
     task_edit_callback, edit_title_callback, edit_description_callback,
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
-    change_assignee_callback,
+    change_assignee_callback, task_close_callback,
     handle_task_report, view_report_attachments_callback,
     tasks_back_callback, main_menu_callback
 )
@@ -142,6 +142,7 @@ subtask_toggle_handler = bot.callback_query_handler(func=lambda c: c.data.starts
 task_delete_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_delete_"))(task_delete_callback)
 confirm_delete_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("confirm_delete_"))(confirm_delete_callback)
 task_status_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_status_"))(task_status_callback)
+task_close_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_close_"))(task_close_callback)
 
 # Callback для редактирования задач
 task_edit_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_edit_"))(task_edit_callback)

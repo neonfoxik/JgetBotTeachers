@@ -281,3 +281,49 @@ def task_status_callback(call: CallbackQuery) -> None:
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+
+
+def task_close_callback(call: CallbackQuery) -> None:
+    """Обработчик нажатия кнопки 'Отправить на проверку'"""
+    try:
+        task_id = int(call.data.split('_')[2])
+        task = Task.objects.get(id=task_id)
+        chat_id = get_chat_id_from_update(call)
+
+        # Проверяем права - только исполнитель может отправить задачу на проверку
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
+        if not allowed:
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
+            return
+
+        user = get_or_create_user(chat_id)
+        # Дополнительная проверка - только исполнитель может отправлять на проверку
+        if task.assignee.telegram_id != user.telegram_id:
+            bot.answer_callback_query(call.id, "❌ Только исполнитель может отправить задачу на проверку", show_alert=True)
+            return
+
+        # Если задача уже в статусе pending_review, показываем уведомление
+        if task.status == 'pending_review':
+            bot.answer_callback_query(
+                call.id,
+                "ℹ️ Задача уже отправлена на проверку",
+                show_alert=False
+            )
+            return
+
+        # Вызываем функцию отправки на проверку
+        from bot.handlers.tasks import initiate_task_close
+        initiate_task_close(chat_id, task)
+
+        # Подтверждаем успешное действие
+        bot.answer_callback_query(
+            call.id,
+            "✅ Задача отправлена на проверку",
+            show_alert=False
+        )
+
+    except (ValueError, ObjectDoesNotExist):
+        bot.answer_callback_query(call.id, "❌ Задача не найдена", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error in task_close_callback: {e}")
+        bot.answer_callback_query(call.id, "❌ Произошла ошибка", show_alert=True)
