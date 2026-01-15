@@ -43,24 +43,53 @@ def status(request: HttpRequest) -> JsonResponse:
 @csrf_exempt
 @require_POST
 def index(request: HttpRequest) -> JsonResponse:
-    if request.META.get("CONTENT_TYPE") != "application/json":
-        return JsonResponse({"message": "Bad Request"}, status=403)
-    json_string = request.body.decode("utf-8")
-    update = Update.de_json(json_string)
     try:
-        bot.process_new_updates([update])
-    except ApiTelegramException as e:
-        logger.error(f"Telegram exception. {e} {format_exc()}")
-    except ConnectionError as e:
-        logger.error(f"Connection error. {e} {format_exc()}")
+        # Проверка Content-Type
+        content_type = request.META.get("CONTENT_TYPE", "")
+        if "application/json" not in content_type:
+            return JsonResponse({"message": "Bad Request: Content-Type must be application/json"}, status=400)
+        
+        # Декодирование тела запроса
+        try:
+            json_string = request.body.decode("utf-8")
+        except UnicodeDecodeError as e:
+            logger.error(f"Unicode decode error: {e}")
+            return JsonResponse({"message": "Bad Request: Invalid encoding"}, status=400)
+        
+        # Парсинг обновления
+        try:
+            update = Update.de_json(json_string)
+            if not update:
+                logger.warning("Empty update received")
+                return JsonResponse({"message": "OK"}, status=200)
+        except Exception as e:
+            logger.error(f"Error parsing update: {e} {format_exc()}")
+            return JsonResponse({"message": "Bad Request: Invalid update format"}, status=400)
+        
+        # Обработка обновления
+        try:
+            bot.process_new_updates([update])
+        except ApiTelegramException as e:
+            logger.error(f"Telegram API exception: {e} {format_exc()}")
+            # Не прерываем выполнение, возвращаем OK
+        except ConnectionError as e:
+            logger.error(f"Connection error: {e} {format_exc()}")
+            # Не прерываем выполнение, возвращаем OK
+        except Exception as e:
+            logger.error(f"Error processing update: {e} {format_exc()}")
+            if hasattr(settings, 'OWNER_ID') and settings.OWNER_ID:
+                try:
+                    bot.send_message(settings.OWNER_ID, f'Error from index: {e}')
+                except Exception as msg_e:
+                    logger.warning(f"Could not send error notification: {msg_e}")
+        
+        # Всегда возвращаем успешный ответ
+        return JsonResponse({"message": "OK", "status": "processed"}, status=200)
+        
     except Exception as e:
-        if hasattr(settings, 'OWNER_ID') and settings.OWNER_ID:
-            try:
-                bot.send_message(settings.OWNER_ID, f'Error from index: {e}')
-            except Exception as msg_e:
-                print(f"Warning: Could not send error notification: {msg_e}")
-        logger.error(f"Unhandled exception. {e} {format_exc()}")
-    return JsonResponse({"message": "OK"}, status=200)
+        # Критическая ошибка - логируем и возвращаем ошибку
+        logger.error(f"Critical error in index view: {e} {format_exc()}")
+        return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
 def register_handlers():
     bot.message_handler(commands=["start"])(start_command)
     bot.message_handler(commands=["tasks"])(tasks_command)
