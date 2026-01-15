@@ -1009,10 +1009,14 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
         task_title = task.title
-        task.delete()
-        text = ""
-        bot.edit_message_text(chat_id=call.message.chat.id, text=text,
-                             reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+        try:
+            task.delete()
+            text = f"✅ Задача '{task_title}' успешно удалена из базы данных"
+            safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+        except Exception as e:
+            logger.error(f"Ошибка при удалении задачи {task_id}: {e}")
+            text = f"❌ Ошибка при удалении задачи '{task_title}': {str(e)}"
+            safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 @bot.callback_query_handler(func=lambda c: c.data.startswith("task_status_"))
