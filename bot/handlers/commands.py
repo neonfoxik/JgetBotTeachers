@@ -64,11 +64,16 @@ def tasks_command_logic(update) -> None:
         text = f"📋 ВАШИ АКТИВНЫЕ ЗАДАЧИ\n\n"
         markup = get_tasks_list_markup(active_tasks, is_creator_view=False)
 
-    if hasattr(update, 'message'):
-        bot.send_message(chat_id, text, reply_markup=markup)
+    # Если это callback (есть message в update), редактируем сообщение
+    if hasattr(update, 'message') and hasattr(update.message, 'message_id'):
+        bot.edit_message_text(
+            chat_id=chat_id,
+            text=text,
+            reply_markup=markup,
+            message_id=update.message.message_id
+        )
     else:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
-
 
 def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
