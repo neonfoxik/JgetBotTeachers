@@ -1,6 +1,6 @@
 from traceback import format_exc
 from asgiref.sync import sync_to_async
-from bot.handlers.tasks import (
+from bot.handlers import (
     start_command, tasks_command, my_created_tasks_command, create_task_command,
     close_task_command, task_progress_command, debug_command, handle_task_creation_messages,
     handle_task_report, skip_description_callback,

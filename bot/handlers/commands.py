@@ -1,0 +1,194 @@
+from bot.handlers.utils import (
+    get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info
+)
+from bot import bot, logger
+from bot.models import User, Task
+from bot.keyboards import get_tasks_list_markup, TASK_MANAGEMENT_MARKUP, main_markup
+from telebot.types import Message, CallbackQuery
+from django.core.exceptions import ObjectDoesNotExist
+
+
+@bot.message_handler(commands=["start"])
+def start_command(message: Message) -> None:
+    chat_id = str(message.chat.id)
+    user = get_or_create_user(
+        telegram_id=chat_id,
+        telegram_username=message.from_user.username,
+        first_name=message.from_user.first_name
+    )
+
+    welcome_text = f"""👋 Привет, {user.first_name or user.user_name}!
+
+🤖 Я бот для управления задачами. Выберите действие:"""
+
+    bot.send_message(chat_id, welcome_text, reply_markup=main_markup)
+
+
+@bot.message_handler(commands=["tasks"])
+def tasks_command(message: Message) -> None:
+    tasks_command_logic(message)
+
+
+@bot.callback_query_handler(func=lambda c: c.data == "tasks")
+def tasks_callback(call: CallbackQuery) -> None:
+    tasks_command_logic(call)
+
+
+def tasks_command_logic(update) -> None:
+    chat_id = get_chat_id_from_update(update)
+    user = get_or_create_user(chat_id)
+
+    # Получаем активные задачи пользователя
+    active_tasks = Task.objects.filter(
+        assignee=user,
+        status__in=['active', 'pending_review']
+    ).order_by('-created_at')
+
+    if not active_tasks:
+        text = "📋 У вас нет активных задач"
+        markup = TASK_MANAGEMENT_MARKUP
+    else:
+        text = f"📋 ВАШИ АКТИВНЫЕ ЗАДАЧИ\n\n"
+        markup = get_tasks_list_markup(active_tasks, is_creator_view=False)
+
+    if hasattr(update, 'message'):
+        bot.send_message(chat_id, text, reply_markup=markup)
+    else:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
+
+
+@bot.message_handler(commands=["my_created_tasks"])
+def my_created_tasks_command(message: Message) -> None:
+    my_created_tasks_command_logic(message)
+
+
+@bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")
+def my_created_tasks_callback(call: CallbackQuery) -> None:
+    my_created_tasks_command_logic(call)
+
+
+def my_created_tasks_command_logic(update) -> None:
+    chat_id = get_chat_id_from_update(update)
+    user = get_or_create_user(chat_id)
+
+    # Получаем задачи созданные пользователем
+    created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
+
+    if not created_tasks:
+        text = "📋 Вы не создали ни одной задачи"
+        markup = TASK_MANAGEMENT_MARKUP
+    else:
+        text = f"📋 ВАШИ СОЗДАННЫЕ ЗАДАЧИ\n\n"
+        markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
+
+    if hasattr(update, 'message'):
+        bot.send_message(chat_id, text, reply_markup=markup)
+    else:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
+
+
+@bot.message_handler(commands=["create_task"])
+def create_task_command(message: Message) -> None:
+    create_task_command_logic(message)
+
+
+@bot.callback_query_handler(func=lambda c: c.data == "create_task")
+def create_task_callback(call: CallbackQuery) -> None:
+    create_task_command_logic(call)
+
+
+def create_task_command_logic(update) -> None:
+    chat_id = get_chat_id_from_update(update)
+    text = "📝 Создание новой задачи\n\nВведите название задачи:"
+    markup = None
+
+    if hasattr(update, 'message'):
+        bot.send_message(chat_id, text, reply_markup=markup)
+    else:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
+
+
+@bot.message_handler(commands=["close_task"])
+def close_task_command(message: Message) -> None:
+    try:
+        parts = message.text.split()
+        if len(parts) != 2:
+            bot.send_message(message.chat.id, "❌ Использование: /close_task <ID задачи>")
+            return
+
+        task_id = int(parts[1])
+        task = Task.objects.get(id=task_id)
+        chat_id = str(message.chat.id)
+        user = get_or_create_user(chat_id)
+
+        if task.assignee != user:
+            bot.send_message(message.chat.id, "❌ Вы не являетесь исполнителем этой задачи")
+            return
+
+        if task.status != 'active':
+            bot.send_message(message.chat.id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'")
+            return
+
+        # Инициируем процесс закрытия задачи
+        initiate_task_close(chat_id, task)
+
+    except (ValueError, ObjectDoesNotExist):
+        bot.send_message(message.chat.id, "❌ Задача не найдена")
+
+
+@bot.message_handler(commands=["task_progress"])
+def task_progress_command(message: Message) -> None:
+    try:
+        parts = message.text.split()
+        if len(parts) != 2:
+            bot.send_message(message.chat.id, "❌ Использование: /task_progress <ID задачи>")
+            return
+
+        task_id = int(parts[1])
+        task = Task.objects.get(id=task_id)
+        chat_id = str(message.chat.id)
+        user = get_or_create_user(chat_id)
+
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
+        if not allowed:
+            bot.send_message(message.chat.id, error_msg)
+            return
+
+        is_creator = task.creator.telegram_id == user.telegram_id
+        is_assignee = task.assignee.telegram_id == user.telegram_id
+        show_task_progress(chat_id, task, is_creator, is_assignee)
+
+    except (ValueError, ObjectDoesNotExist):
+        bot.send_message(message.chat.id, "❌ Задача не найдена")
+
+
+@bot.message_handler(commands=["debug"])
+def debug_command(message: Message) -> None:
+    chat_id = str(message.chat.id)
+    user = get_or_create_user(chat_id)
+
+    debug_info = f"""
+🐛 DEBUG ИНФОРМАЦИЯ
+
+👤 Пользователь: {user.user_name}
+🆔 Telegram ID: {user.telegram_id}
+👑 Админ: {'Да' if user.is_admin else 'Нет'}
+📅 Дата регистрации: {user.created_at.strftime('%d.%m.%Y %H:%M')}
+
+📊 СТАТИСТИКА ЗАДАЧ:
+"""
+
+    # Статистика задач
+    total_created = Task.objects.filter(creator=user).count()
+    total_assigned = Task.objects.filter(assignee=user).count()
+    active_tasks = Task.objects.filter(assignee=user, status='active').count()
+    completed_tasks = Task.objects.filter(assignee=user, status='completed').count()
+
+    debug_info += f"""
+📝 Создано задач: {total_created}
+📋 Назначено задач: {total_assigned}
+🔄 Активных задач: {active_tasks}
+✅ Завершенных задач: {completed_tasks}
+"""
+
+    bot.send_message(chat_id, debug_info)
