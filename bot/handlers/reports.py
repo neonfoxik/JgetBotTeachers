@@ -46,13 +46,9 @@ def handle_task_report(message: Message) -> None:
             return
 
         # Обрабатываем текстовый отчет
+        report_text = ""
         if message.text and not message.text.startswith('/'):
             report_text = message.text.strip()
-            if len(report_text) < 10:
-                bot.send_message(message.chat.id, "❌ Отчет должен содержать минимум 10 символов текста ИЛИ вложения (фото/файлы)")
-                return
-
-            active_task.report_text = report_text
 
         # Обрабатываем вложения
         attachments = []
@@ -75,8 +71,23 @@ def handle_task_report(message: Message) -> None:
                 'file_path': file_info.file_path
             })
 
+        # Проверяем, что есть либо достаточный текст, либо вложения
+        has_valid_content = False
+        if len(report_text) >= 10:
+            has_valid_content = True
+            active_task.report_text = report_text
+        elif attachments:
+            has_valid_content = True
+            if len(report_text) > 0:
+                active_task.report_text = report_text  # Сохраняем даже короткий текст, если есть вложения
+            else:
+                active_task.report_text = f"Отчет с вложениями ({len(attachments)} файлов)"
+        else:
+            bot.send_message(message.chat.id, "❌ Отчет должен содержать минимум 10 символов текста ИЛИ вложения (фото/файлы)")
+            return
+
         # Сохраняем отчет и вложения
-        if message.text or attachments:
+        if has_valid_content:
             active_task.report_attachments = attachments
             active_task.status = 'pending_review'
             active_task.save()
