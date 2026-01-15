@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from bot import bot, logger
 from bot.models import User, Task, Subtask, UserState
+from telebot.apihelper import ApiTelegramException
 from bot.keyboards import (
     get_task_actions_markup, get_task_confirmation_markup,
     get_subtask_toggle_markup, get_tasks_list_markup, get_user_selection_markup,
@@ -17,6 +18,24 @@ from telebot.types import (
 )
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, message_id=None) -> None:
+    """Безопасно редактирует сообщение или отправляет новое при ошибке"""
+    try:
+        if message_id:
+            bot.edit_message_text(
+                chat_id=chat_id,
+                text=text,
+                reply_markup=reply_markup,
+                message_id=message_id
+            )
+        else:
+            bot.send_message(chat_id, text, reply_markup=reply_markup)
+    except ApiTelegramException as e:
+        logger.warning(f"Failed to edit message {message_id} in chat {chat_id}: {e}")
+        try:
+            bot.send_message(chat_id, text, reply_markup=reply_markup)
+        except Exception as send_e:
+            logger.error(f"Failed to send message to chat {chat_id}: {send_e}")
 def get_user_state(chat_id) -> dict:
     try:
         user = get_or_create_user(str(chat_id))
@@ -139,7 +158,28 @@ def tasks_command(message: Message) -> None:
     tasks_command_logic(message)
 @bot.callback_query_handler(func=lambda c: c.data == "tasks")
 def tasks_callback(call: CallbackQuery) -> None:
-    tasks_command_logic(call)
+    chat_id = get_chat_id_from_update(call)
+    user = get_or_create_user(chat_id)
+    active_tasks = Task.objects.filter(
+        assignee=user,
+        status__in=['active', 'pending_review']
+    ).order_by('due_date', '-created_at')
+    if not active_tasks:
+        safe_edit_or_send_message(
+            chat_id=call.message.chat.id,
+            text="📋 У вас нет активных задач",
+            reply_markup=TASK_MANAGEMENT_MARKUP,
+            message_id=call.message.message_id
+        )
+        return
+    text = f"📋 ВАШИ АКТИВНЫЕ ЗАДАЧИ\n\n"
+    markup = get_tasks_list_markup(active_tasks, is_creator_view=False)
+    safe_edit_or_send_message(
+        chat_id=call.message.chat.id,
+        text=text,
+        reply_markup=markup,
+        message_id=call.message.message_id
+    )
 def tasks_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     user = get_or_create_user(chat_id)
@@ -159,7 +199,25 @@ def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
 @bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")
 def my_created_tasks_callback(call: CallbackQuery) -> None:
-    my_created_tasks_command_logic(call)
+    chat_id = get_chat_id_from_update(call)
+    user = get_or_create_user(chat_id)
+    created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
+    if not created_tasks:
+        safe_edit_or_send_message(
+            chat_id=call.message.chat.id,
+            text="📋 Вы еще не создали ни одной задачи",
+            reply_markup=TASK_MANAGEMENT_MARKUP,
+            message_id=call.message.message_id
+        )
+        return
+    text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
+    markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
+    safe_edit_or_send_message(
+        chat_id=call.message.chat.id,
+        text=text,
+        reply_markup=markup,
+        message_id=call.message.message_id
+    )
 def my_created_tasks_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     user = get_or_create_user(chat_id)
@@ -475,7 +533,7 @@ def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQ
                              reply_markup=markup, message_id=call.message.message_id)
     else:
         bot.send_message(chat_id, text, reply_markup=markup)
-def create_task_from_state(chat_id: str, user_state: dict) -> None:
+def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, InlineKeyboardMarkup]:
     try:
         creator = get_or_create_user(chat_id)
         assignee_id = user_state.get('assignee_id')
@@ -500,12 +558,13 @@ def create_task_from_state(chat_id: str, user_state: dict) -> None:
         if task.due_date:
             due_date_text = task.due_date.strftime('%d.%m.%Y %H:%M')
         text = f"✅ Задача успешно создана!\n\n📝 {task.title}\n📄 {task.description or 'Описание не указано'}\n👤 Исполнитель: {task.assignee.user_name}\n⏰ Срок: {due_date_text}"
-        bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
-    except Exception as e:
-        bot.send_message(chat_id, f"❌ Ошибка при создании задачи: {e}")
-        print(f"Error creating task: {e}")
-    finally:
         clear_user_state(chat_id)
+        return True, text, TASK_MANAGEMENT_MARKUP
+    except Exception as e:
+        clear_user_state(chat_id)
+        error_text = f"❌ Ошибка при создании задачи: {e}"
+        print(f"Error creating task: {e}")
+        return False, error_text, TASK_MANAGEMENT_MARKUP
 @bot.callback_query_handler(func=lambda c: c.data.startswith("task_view_"))
 def task_view_callback(call: CallbackQuery) -> None:
     try:
@@ -564,7 +623,48 @@ def task_close_callback(call: CallbackQuery) -> None:
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
-        initiate_task_close(chat_id, task)
+        if task.status not in ['active', 'pending_review']:
+            safe_edit_or_send_message(
+                chat_id=call.message.chat.id,
+                text=f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'",
+                reply_markup=TASK_MANAGEMENT_MARKUP,
+                message_id=call.message.message_id
+            )
+            return
+        if task.creator.telegram_id == task.assignee.telegram_id:
+            task.status = 'completed'
+            task.closed_at = timezone.now()
+            task.save()
+            try:
+                from bot.schedulers import unschedule_task_reminder
+                unschedule_task_reminder(task.id)
+            except Exception as e:
+                print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
+            safe_edit_or_send_message(
+                chat_id=call.message.chat.id,
+                text=f"✅ ЗАДАЧА ЗАКРЫТА\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!",
+                reply_markup=TASK_MANAGEMENT_MARKUP,
+                message_id=call.message.message_id
+            )
+        else:
+            text = f"""📄 ОТПРАВКА ОТЧЕТА О ВЫПОЛНЕНИИ
+{format_task_info(task)}
+📝 Отправьте текст отчета о выполнении задачи.
+Отчет должен содержать минимум 10 символов.
+💡 Вы можете прикрепить фото или файлы к сообщению с отчетом.
+Отправьте текст отчета с вложениями (если нужно) в одном сообщении."""
+            markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="tasks_back"))
+            safe_edit_or_send_message(
+                chat_id=call.message.chat.id,
+                text=text,
+                reply_markup=markup,
+                message_id=call.message.message_id
+            )
+            set_user_state(chat_id, {
+                'state': 'waiting_task_report',
+                'task_id': task.id
+            })
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 @bot.callback_query_handler(func=lambda c: c.data.startswith("task_complete_"))
@@ -619,9 +719,12 @@ def task_confirm_callback(call: CallbackQuery) -> None:
             )
         except:
             pass
-        text = ""
-        bot.edit_message_text(chat_id=call.message.chat.id, text=text,
-                            reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+        safe_edit_or_send_message(
+            chat_id=call.message.chat.id,
+            text="✅ Задача подтверждена и отмечена как выполненная!",
+            reply_markup=TASK_MANAGEMENT_MARKUP,
+            message_id=call.message.message_id
+        )
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 @bot.callback_query_handler(func=lambda c: c.data.startswith("task_reject_"))
@@ -645,9 +748,12 @@ def task_reject_callback(call: CallbackQuery) -> None:
             )
         except:
             pass
-        text = ""
-        bot.edit_message_text(chat_id=call.message.chat.id, text=text,
-                            reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+        safe_edit_or_send_message(
+            chat_id=call.message.chat.id,
+            text="❌ Задача отклонена. Исполнитель получил уведомление о необходимости доработки.",
+            reply_markup=TASK_MANAGEMENT_MARKUP,
+            message_id=call.message.message_id
+        )
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 @bot.callback_query_handler(func=lambda c: c.data.startswith("subtask_toggle_"))
@@ -709,7 +815,13 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
     if not user_state or user_state.get('state') != 'waiting_assignee_selection':
         bot.answer_callback_query(call.id, "Сессия истекла", show_alert=True)
         return
-    create_task_from_state(chat_id, user_state)
+    success, text, markup = create_task_from_state(chat_id, user_state)
+    safe_edit_or_send_message(
+        chat_id=call.message.chat.id,
+        text=text,
+        reply_markup=markup,
+        message_id=call.message.message_id
+    )
 @bot.callback_query_handler(func=lambda c: c.data == "skip_assignee")
 def skip_assignee_callback(call: CallbackQuery) -> None:
     assign_to_creator_callback(call)
