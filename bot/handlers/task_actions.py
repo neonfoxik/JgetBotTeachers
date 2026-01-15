@@ -286,24 +286,35 @@ def task_status_callback(call: CallbackQuery) -> None:
 def task_close_callback(call: CallbackQuery) -> None:
     """Обработчик нажатия кнопки 'Отправить на проверку'"""
     try:
+        logger.info(f"task_close_callback called with data: {call.data}")
         task_id = int(call.data.split('_')[2])
+        logger.info(f"Extracted task_id: {task_id}")
+
         task = Task.objects.get(id=task_id)
+        logger.info(f"Found task: {task.title} (status: {task.status})")
+
         chat_id = get_chat_id_from_update(call)
+        logger.info(f"Chat ID: {chat_id}")
 
         # Проверяем права - только исполнитель может отправить задачу на проверку
         allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
         if not allowed:
+            logger.warning(f"Permission denied: {error_msg}")
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
         user = get_or_create_user(chat_id)
+        logger.info(f"User: {user.user_name}")
+
         # Дополнительная проверка - только исполнитель может отправлять на проверку
         if task.assignee.telegram_id != user.telegram_id:
+            logger.warning(f"User {user.telegram_id} is not assignee of task {task.id}")
             bot.answer_callback_query(call.id, "❌ Только исполнитель может отправить задачу на проверку", show_alert=True)
             return
 
         # Если задача уже в статусе pending_review, показываем уведомление
         if task.status == 'pending_review':
+            logger.info(f"Task {task.id} already in pending_review status")
             bot.answer_callback_query(
                 call.id,
                 "ℹ️ Задача уже отправлена на проверку",
@@ -312,18 +323,26 @@ def task_close_callback(call: CallbackQuery) -> None:
             return
 
         # Вызываем функцию отправки на проверку
+        logger.info(f"Calling initiate_task_close for task {task.id}")
         from bot.handlers.tasks import initiate_task_close
         initiate_task_close(chat_id, task)
 
         # Подтверждаем успешное действие
+        logger.info(f"Task {task.id} successfully sent for review")
         bot.answer_callback_query(
             call.id,
             "✅ Задача отправлена на проверку",
             show_alert=False
         )
 
-    except (ValueError, ObjectDoesNotExist):
+    except (ValueError, ObjectDoesNotExist) as e:
+        logger.error(f"Task not found error in task_close_callback: {e}")
         bot.answer_callback_query(call.id, "❌ Задача не найдена", show_alert=True)
     except Exception as e:
-        logger.error(f"Error in task_close_callback: {e}")
-        bot.answer_callback_query(call.id, "❌ Произошла ошибка", show_alert=True)
+        logger.error(f"Unexpected error in task_close_callback: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        try:
+            bot.answer_callback_query(call.id, "❌ Произошла ошибка", show_alert=True)
+        except Exception as answer_error:
+            logger.error(f"Failed to answer callback query: {answer_error}")
