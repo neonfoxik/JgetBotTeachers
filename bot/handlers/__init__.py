@@ -10,7 +10,8 @@ from .tasks import (
 from .task_actions import (
     task_view_callback, task_progress_callback, task_complete_callback,
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
-    task_delete_callback, confirm_delete_callback, task_status_callback
+    task_delete_callback, confirm_delete_callback, task_status_callback,
+    task_close_callback
 )
 from .task_creation import (
     handle_task_creation_messages, skip_description_callback, skip_due_date_callback,

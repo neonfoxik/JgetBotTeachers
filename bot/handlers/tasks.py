@@ -134,34 +134,53 @@ def create_task_command_logic(update) -> None:
 # Обработчик debug перенесен в commands.py
 
 def initiate_task_close(chat_id: str, task: Task) -> None:
-    if task.status not in ['active', 'pending_review']:
-        bot.send_message(chat_id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'")
-        return
-    if task.creator.telegram_id == task.assignee.telegram_id:
-        task.status = 'completed'
-        task.closed_at = timezone.now()
-        task.save()
-        try:
-            from bot.schedulers import unschedule_task_reminder
-            unschedule_task_reminder(task.id)
-        except Exception as e:
-            print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
-        text = f"✅ ЗАДАЧА ЗАКРЫТА\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!"
-        bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
-    else:
-        text = f"""📄 ОТПРАВКА ОТЧЕТА О ВЫПОЛНЕНИИ
+    """Инициирует процесс закрытия задачи"""
+    try:
+        if task.status not in ['active', 'pending_review']:
+            bot.send_message(chat_id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'")
+            return
+
+        if task.creator.telegram_id == task.assignee.telegram_id:
+            # Создатель и исполнитель - один человек, закрываем задачу сразу
+            task.status = 'completed'
+            task.closed_at = timezone.now()
+            task.save()
+
+            try:
+                from bot.schedulers import unschedule_task_reminder
+                unschedule_task_reminder(task.id)
+            except Exception as e:
+                print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
+
+            text = f"✅ ЗАДАЧА ЗАКРЫТА\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!"
+            bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
+        else:
+            # Отправляем запрос на отчет
+            text = f"""📄 ОТПРАВКА ОТЧЕТА О ВЫПОЛНЕНИИ
 {format_task_info(task)}
 📝 Отправьте текст отчета о выполнении задачи.
 Отчет должен содержать минимум 10 символов.
 💡 Вы можете прикрепить фото или файлы к сообщению с отчетом.
 Отправьте текст отчета с вложениями (если нужно) в одном сообщении."""
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="tasks_back"))
-        bot.send_message(chat_id, text, reply_markup=markup)
-        set_user_state(chat_id, {
-            'state': 'waiting_task_report',
-            'task_id': task.id
-        })
+
+            markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="tasks_back"))
+
+            bot.send_message(chat_id, text, reply_markup=markup)
+
+            set_user_state(chat_id, {
+                'state': 'waiting_task_report',
+                'task_id': task.id
+            })
+    except Exception as e:
+        logger.error(f"Error in initiate_task_close: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        # Отправляем сообщение об ошибке пользователю
+        try:
+            bot.send_message(chat_id, "❌ Произошла ошибка при отправке задачи на проверку")
+        except Exception as msg_error:
+            logger.error(f"Failed to send error message: {msg_error}")
 def handle_task_report(message: Message) -> None:
     user_state = get_user_state(str(message.chat.id))
     if not user_state or user_state.get('state') != 'waiting_task_report':
