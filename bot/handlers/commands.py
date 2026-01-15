@@ -46,7 +46,11 @@ def tasks_command(message: Message) -> None:
 def tasks_callback(call: CallbackQuery) -> None:
     # Проверяем, находится ли пользователь уже в разделе "мои задачи" (активные задачи)
     current_text = getattr(call.message, 'text', '') or getattr(call.message, 'caption', '') or ''
-    if "ВАШИ АКТИВНЫЕ ЗАДАЧИ" in current_text:
+    logger.info(f"tasks_callback: current_text = '{current_text[:100]}...'")
+
+    # Проверяем оба возможных текста раздела "мои задачи"
+    if "ВАШИ АКТИВНЫЕ ЗАДАЧИ" in current_text or "У вас нет активных задач" in current_text:
+        logger.info("tasks_callback: User already in tasks section, showing notification")
         # Показываем уведомление, что пользователь уже в этом разделе
         bot.answer_callback_query(
             call.id,
@@ -55,6 +59,7 @@ def tasks_callback(call: CallbackQuery) -> None:
         )
         return
 
+    logger.info("tasks_callback: User not in tasks section, loading tasks")
     # Вызываем логику напрямую с передачей callback объекта
     tasks_command_logic(call)
 
