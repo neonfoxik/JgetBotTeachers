@@ -161,8 +161,8 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     if task.due_date:
         text += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}\n"
 
-    if task.status == 'completed' and task.completed_at:
-        text += f"✅ Завершена: {task.completed_at.strftime('%d.%m.%Y %H:%M')}\n"
+    if task.status == 'completed' and task.closed_at:
+        text += f"✅ Завершена: {task.closed_at.strftime('%d.%m.%Y %H:%M')}\n"
 
     if task.status == 'pending_review' and task.report_text:
         text += f"\n📄 ОТЧЕТ:\n{task.report_text}\n"

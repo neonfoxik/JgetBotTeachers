@@ -86,7 +86,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
         if is_creator:
             # Если создатель завершает задачу напрямую
             task.status = 'completed'
-            task.completed_at = timezone.now()
+            task.closed_at = timezone.now()
             task.save()
             text = f"✅ Задача '{task.title}' отмечена как выполненная!"
         else:
@@ -124,7 +124,7 @@ def task_confirm_callback(call: CallbackQuery) -> None:
             return
 
         task.status = 'completed'
-        task.completed_at = timezone.now()
+        task.closed_at = timezone.now()
         task.save()
 
         text = f"✅ Задача '{task.title}' подтверждена и завершена!"
