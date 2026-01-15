@@ -10,6 +10,7 @@ LOCAL = os.getenv('LOCAL', 'False').lower() == 'true'
 if not LOCAL:
     import pymysql
     pymysql.install_as_MySQLdb()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'w337k69z4)(z^v@^(^k^^s6v^6gp!hphhk15mlt$s$c'
 DEBUG = True
@@ -62,7 +63,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'dd.wsgi.application'
 
 if LOCAL:
-DATABASES = {
+    DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
@@ -94,6 +95,7 @@ else:
             }
         }
     }
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
