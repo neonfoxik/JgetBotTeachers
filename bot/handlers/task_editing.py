@@ -25,7 +25,6 @@ def show_task_edit_menu(call: CallbackQuery, task: Task) -> None:
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_edit_"))
 def task_edit_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -42,7 +41,6 @@ def task_edit_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("edit_title_"))
 def edit_title_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -67,7 +65,6 @@ def edit_title_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("edit_description_"))
 def edit_description_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -93,7 +90,6 @@ def edit_description_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("edit_assignee_"))
 def edit_assignee_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -125,7 +121,6 @@ def show_assignee_selection_page(call: CallbackQuery, task: Task, page: int, use
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("assignee_page_"))
 def assignee_page_callback(call: CallbackQuery) -> None:
     try:
         parts = call.data.split('_')
@@ -145,7 +140,6 @@ def assignee_page_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("change_assignee_"))
 def change_assignee_callback(call: CallbackQuery) -> None:
     try:
         parts = call.data.split('_')
@@ -189,7 +183,6 @@ def change_assignee_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Ошибка при смене исполнителя", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("edit_due_date_"))
 def edit_due_date_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])

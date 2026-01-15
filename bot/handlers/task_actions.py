@@ -13,7 +13,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_view_"))
 def task_view_callback(call: CallbackQuery) -> None:
     try:
         parts = call.data.split('_')
@@ -37,7 +36,6 @@ def task_view_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, f"Ошибка: {e}", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_progress_"))
 def task_progress_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -68,7 +66,6 @@ def task_progress_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_complete_"))
 def task_complete_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -112,7 +109,6 @@ def task_complete_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_confirm_"))
 def task_confirm_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -146,7 +142,6 @@ def task_confirm_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_reject_"))
 def task_reject_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -182,7 +177,6 @@ def task_reject_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("subtask_toggle_"))
 def subtask_toggle_callback(call: CallbackQuery) -> None:
     try:
         parts = call.data.split('_')
@@ -221,7 +215,6 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Подзадача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_delete_"))
 def task_delete_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -243,7 +236,6 @@ def task_delete_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("confirm_delete_"))
 def confirm_delete_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])
@@ -267,7 +259,6 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("task_status_"))
 def task_status_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[2])

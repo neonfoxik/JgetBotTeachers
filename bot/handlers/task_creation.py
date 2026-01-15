@@ -57,7 +57,6 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
         return False, f"❌ Ошибка при создании задачи: {str(e)}", TASK_MANAGEMENT_MARKUP
 
 
-@bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))
 def handle_task_creation_messages(message: Message) -> None:
     chat_id = str(message.chat.id)
     logger.info(f"Получено сообщение от {chat_id}: '{message.text}'")
@@ -125,7 +124,6 @@ def handle_task_creation_messages(message: Message) -> None:
         bot.send_message(chat_id, "❌ Произошла ошибка при обработке сообщения. Попробуйте начать создание задачи заново.")
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "skip_description")
 def skip_description_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -140,7 +138,6 @@ def skip_description_callback(call: CallbackQuery) -> None:
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "skip_due_date")
 def skip_due_date_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -151,7 +148,6 @@ def skip_due_date_callback(call: CallbackQuery) -> None:
         show_assignee_selection_menu(chat_id, user_state, call)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "assign_to_creator")
 def assign_to_creator_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -164,13 +160,11 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
         safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "skip_assignee")
 def skip_assignee_callback(call: CallbackQuery) -> None:
     # То же самое что и assign_to_creator
     assign_to_creator_callback(call)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "choose_assignee")
 def choose_assignee_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -178,7 +172,6 @@ def choose_assignee_callback(call: CallbackQuery) -> None:
         show_assignee_selection_menu(chat_id, user_state, call)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("user_page_"))
 def user_page_callback(call: CallbackQuery) -> None:
     try:
         page = int(call.data.split('_')[2])
@@ -194,7 +187,6 @@ def show_user_selection_page(call: CallbackQuery, page: int, users_per_page: int
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("select_user_"))
 def select_user_callback(call: CallbackQuery) -> None:
     try:
         assignee_telegram_id = call.data.split('_')[2]
@@ -214,7 +206,6 @@ def select_user_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Ошибка при выборе пользователя", show_alert=True)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_selection")
 def back_to_assignee_selection_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -222,7 +213,6 @@ def back_to_assignee_selection_callback(call: CallbackQuery) -> None:
         show_assignee_selection_menu(chat_id, user_state, call)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_type")
 def back_to_assignee_type_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -230,7 +220,6 @@ def back_to_assignee_type_callback(call: CallbackQuery) -> None:
         show_assignee_selection_menu(chat_id, user_state, call)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")
 def cancel_task_creation_callback(call: CallbackQuery) -> None:
     clear_user_state(str(call.message.chat.id))
     text = "❌ Создание задачи отменено"

@@ -28,11 +28,11 @@ def get_chat_id_from_update(update) -> str:
         return str(update.message.chat.id)
     else:
         raise ValueError("Cannot extract chat_id from update")
-@bot.message_handler(commands=["tasks"])
-def tasks_command(message: Message) -> None:
-    tasks_command_logic(message)
-@bot.callback_query_handler(func=lambda c: c.data == "tasks")
-def tasks_callback(call: CallbackQuery) -> None:
+def create_task_command(message: Message) -> None:
+    create_task_command_logic(message)
+
+def create_task_callback(call: CallbackQuery) -> None:
+    create_task_command_logic(call)
     chat_id = get_chat_id_from_update(call)
     user = get_or_create_user(chat_id)
     active_tasks = Task.objects.filter(
@@ -104,12 +104,6 @@ def my_created_tasks_command_logic(update) -> None:
     text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
     markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
     bot.send_message(chat_id, text, reply_markup=markup)
-@bot.message_handler(commands=["create_task"])
-def create_task_command(message: Message) -> None:
-    create_task_command_logic(message)
-@bot.callback_query_handler(func=lambda c: c.data == "create_task")
-def create_task_callback(call: CallbackQuery) -> None:
-    create_task_command_logic(call)
 def create_task_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     logger.info(f"Начало создания задачи для пользователя {chat_id}")
@@ -120,8 +114,7 @@ def create_task_command_logic(update) -> None:
     bot.send_message(chat_id, text, reply_markup=markup)
     set_user_state(chat_id, {'state': 'waiting_task_title'})
     logger.info(f"Установлено состояние 'waiting_task_title' для пользователя {chat_id}")
-@bot.message_handler(commands=["close_task"])
-def close_task_command(message: Message) -> None:
+# Обработчик close_task перенесен в commands.py
     args = message.text.split()
     if len(args) < 2:
         bot.send_message(message.chat.id, "❌ Использование: /close_task <ID задачи>")
@@ -141,8 +134,7 @@ def close_task_command(message: Message) -> None:
         bot.send_message(message.chat.id, error_msg)
         return
     initiate_task_close(message.chat.id, task)
-@bot.message_handler(commands=["task_progress"])
-def task_progress_command(message: Message) -> None:
+# Обработчик task_progress перенесен в commands.py
     args = message.text.split()
     if len(args) < 2:
         bot.send_message(message.chat.id, "❌ Использование: /task_progress <ID задачи>")
@@ -166,8 +158,7 @@ def task_progress_command(message: Message) -> None:
     is_creator = task.creator.telegram_id == user.telegram_id
     is_assignee = task.assignee.telegram_id == user.telegram_id
     show_task_progress(chat_id, task, is_creator, is_assignee)
-@bot.message_handler(commands=["debug"])
-def debug_command(message: Message) -> None:
+# Обработчик debug перенесен в commands.py
     user = get_or_create_user(str(message.chat.id))
     state_info = "Нет активного состояния"
     if hasattr(bot, 'user_states') and message.chat.id in bot.user_states:
@@ -279,14 +270,11 @@ def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_as
             text += f"\n{status} {subtask.title}{completed_date}"
     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, is_creator, is_assignee)
     safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id)
-@bot.callback_query_handler(func=lambda c: c.data == "tasks_back")
-def tasks_back_callback(call: CallbackQuery) -> None:
+# Обработчик tasks_back перенесен в main.py
     tasks_command(call)
-@bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_type")
-def back_to_assignee_type_callback(call: CallbackQuery) -> None:
+# Обработчик back_to_assignee_type перенесен в task_creation.py
     back_to_assignee_selection_callback(call)
-@bot.callback_query_handler(func=lambda c: c.data.startswith("view_report_attachments_"))
-def view_report_attachments_callback(call: CallbackQuery) -> None:
+# Обработчик view_report_attachments перенесен в reports.py
     try:
         task_id = int(call.data.split('_')[3])
         task = Task.objects.get(id=task_id)
@@ -307,7 +295,6 @@ def view_report_attachments_callback(call: CallbackQuery) -> None:
         bot.edit_message_text(chat_id=call.message.chat.id, text=text, message_id=call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
-@bot.callback_query_handler(func=lambda c: c.data == "main_menu")
-def main_menu_callback(call: CallbackQuery) -> None:
+# Обработчик main_menu перенесен в main.py
     text = "🏠 Главное меню"
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)

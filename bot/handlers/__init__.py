@@ -1,7 +1,11 @@
 # Импорты из новых модулей
 from .commands import (
     start_command, tasks_command, my_created_tasks_command,
-    close_task_command, task_progress_command, debug_command
+    close_task_command, task_progress_command, debug_command,
+    tasks_callback, my_created_tasks_callback
+)
+from .tasks import (
+    create_task_command, create_task_callback
 )
 from .task_actions import (
     task_view_callback, task_progress_callback, task_complete_callback,

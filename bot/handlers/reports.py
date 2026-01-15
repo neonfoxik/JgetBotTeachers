@@ -25,7 +25,6 @@ def initiate_task_close(chat_id: str, task: Task) -> None:
     bot.send_message(chat_id, text, reply_markup=markup)
 
 
-@bot.message_handler(content_types=['text', 'photo', 'document'])
 def handle_task_report(message: Message) -> None:
     chat_id = str(message.chat.id)
     user = get_or_create_user(chat_id)
@@ -112,7 +111,6 @@ def handle_task_report(message: Message) -> None:
         bot.send_message(message.chat.id, f"❌ Ошибка при отправке отчета: {e}")
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("view_report_attachments_"))
 def view_report_attachments_callback(call: CallbackQuery) -> None:
     try:
         task_id = int(call.data.split('_')[3])

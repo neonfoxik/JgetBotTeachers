@@ -37,12 +37,10 @@ def start_command(message: Message) -> None:
             pass
 
 
-@bot.message_handler(commands=["tasks"])
 def tasks_command(message: Message) -> None:
     tasks_command_logic(message)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "tasks")
 def tasks_callback(call: CallbackQuery) -> None:
     tasks_command_logic(call)
 
@@ -70,12 +68,10 @@ def tasks_command_logic(update) -> None:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
 
 
-@bot.message_handler(commands=["my_created_tasks"])
 def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
 
 
-@bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")
 def my_created_tasks_callback(call: CallbackQuery) -> None:
     my_created_tasks_command_logic(call)
 
@@ -103,7 +99,6 @@ def my_created_tasks_command_logic(update) -> None:
 # Обработчик create_task перенесен в tasks.py для избежания дублирования
 
 
-@bot.message_handler(commands=["close_task"])
 def close_task_command(message: Message) -> None:
     try:
         parts = message.text.split()
@@ -131,7 +126,6 @@ def close_task_command(message: Message) -> None:
         bot.send_message(message.chat.id, "❌ Задача не найдена")
 
 
-@bot.message_handler(commands=["task_progress"])
 def task_progress_command(message: Message) -> None:
     try:
         parts = message.text.split()
@@ -157,7 +151,6 @@ def task_progress_command(message: Message) -> None:
         bot.send_message(message.chat.id, "❌ Задача не найдена")
 
 
-@bot.message_handler(commands=["debug"])
 def debug_command(message: Message) -> None:
     chat_id = str(message.chat.id)
     user = get_or_create_user(chat_id)

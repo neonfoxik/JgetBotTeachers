@@ -2,9 +2,21 @@ from traceback import format_exc
 from asgiref.sync import sync_to_async
 from bot.handlers import (
     start_command, tasks_command, my_created_tasks_command,
-    close_task_command, task_progress_command, debug_command, handle_task_creation_messages,
-    handle_task_report, skip_description_callback,
-    skip_due_date_callback, cancel_task_creation_callback
+    close_task_command, task_progress_command, debug_command,
+    tasks_callback, my_created_tasks_callback,
+    create_task_command, create_task_callback,
+    handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
+    assign_to_creator_callback, skip_assignee_callback, choose_assignee_callback,
+    user_page_callback, select_user_callback, back_to_assignee_selection_callback,
+    back_to_assignee_type_callback, cancel_task_creation_callback,
+    task_view_callback, task_progress_callback, task_complete_callback,
+    task_confirm_callback, task_reject_callback, subtask_toggle_callback,
+    task_delete_callback, confirm_delete_callback, task_status_callback,
+    task_edit_callback, edit_title_callback, edit_description_callback,
+    edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
+    change_assignee_callback,
+    handle_task_report, view_report_attachments_callback,
+    tasks_back_callback, main_menu_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -90,27 +102,60 @@ def index(request: HttpRequest) -> JsonResponse:
         # Критическая ошибка - логируем и возвращаем ошибку
         logger.error(f"Critical error in index view: {e} {format_exc()}")
         return JsonResponse({"message": "Internal Server Error", "error": str(e)}, status=500)
-def register_handlers():
-    logger.info("Регистрация обработчиков бота...")
-    try:
-        bot.message_handler(commands=["start"])(start_command)
-        logger.info("Обработчик /start зарегистрирован")
-        bot.message_handler(commands=["tasks"])(tasks_command)
-        logger.info("Обработчик /tasks зарегистрирован")
-        bot.message_handler(commands=["my_created_tasks"])(my_created_tasks_command)
-        bot.message_handler(commands=["close_task"])(close_task_command)
-        bot.message_handler(commands=["task_progress"])(task_progress_command)
-        bot.message_handler(commands=["debug"])(debug_command)
-        bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))(handle_task_creation_messages)
-        bot.message_handler(content_types=['text', 'photo', 'document'])(handle_task_report)
-        bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
-        bot.callback_query_handler(func=lambda c: c.data == "skip_due_date")(skip_due_date_callback)
-        bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
-        logger.info("Все обработчики успешно зарегистрированы")
-    except Exception as e:
-        logger.error(f"Ошибка при регистрации обработчиков: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
 
-# Регистрируем обработчики при загрузке модуля
-register_handlers()
+start_handler = bot.message_handler(commands=["start"])(start_command)
+tasks_command_handler = bot.message_handler(commands=["tasks"])(tasks_command)
+my_created_tasks_command_handler = bot.message_handler(commands=["my_created_tasks"])(my_created_tasks_command)
+close_task_command_handler = bot.message_handler(commands=["close_task"])(close_task_command)
+task_progress_command_handler = bot.message_handler(commands=["task_progress"])(task_progress_command)
+debug_command_handler = bot.message_handler(commands=["debug"])(debug_command)
+create_task_command_handler = bot.message_handler(commands=["create_task"])(create_task_command)
+
+# Callback для команд
+tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "tasks")(tasks_callback)
+my_created_tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")(my_created_tasks_callback)
+create_task_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "create_task")(create_task_callback)
+
+# Обработка сообщений
+handle_task_creation_messages_handler = bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))(handle_task_creation_messages)
+handle_task_report_handler = bot.message_handler(content_types=['text', 'photo', 'document'])(handle_task_report)
+
+# Callback для создания задач
+skip_description_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
+skip_due_date_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_due_date")(skip_due_date_callback)
+assign_to_creator_handler = bot.callback_query_handler(func=lambda c: c.data == "assign_to_creator")(assign_to_creator_callback)
+skip_assignee_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_assignee")(skip_assignee_callback)
+choose_assignee_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_assignee")(choose_assignee_callback)
+user_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("user_page_"))(user_page_callback)
+select_user_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("select_user_"))(select_user_callback)
+back_to_assignee_selection_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_selection")(back_to_assignee_selection_callback)
+back_to_assignee_type_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_type")(back_to_assignee_type_callback)
+cancel_task_creation_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
+
+# Callback для действий с задачами
+task_view_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_view_"))(task_view_callback)
+task_progress_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_progress_"))(task_progress_callback)
+task_complete_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_complete_"))(task_complete_callback)
+task_confirm_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_confirm_"))(task_confirm_callback)
+task_reject_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_reject_"))(task_reject_callback)
+subtask_toggle_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("subtask_toggle_"))(subtask_toggle_callback)
+task_delete_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_delete_"))(task_delete_callback)
+confirm_delete_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("confirm_delete_"))(confirm_delete_callback)
+task_status_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_status_"))(task_status_callback)
+
+# Callback для редактирования задач
+task_edit_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_edit_"))(task_edit_callback)
+edit_title_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_title_"))(edit_title_callback)
+edit_description_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_description_"))(edit_description_callback)
+edit_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_assignee_"))(edit_assignee_callback)
+edit_due_date_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_due_date_"))(edit_due_date_callback)
+assignee_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("assignee_page_"))(assignee_page_callback)
+change_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("change_assignee_"))(change_assignee_callback)
+
+# Callback для отчетов
+view_report_attachments_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("view_report_attachments_"))(view_report_attachments_callback)
+
+# Callback для главного меню
+tasks_back_handler = bot.callback_query_handler(func=lambda c: c.data == "tasks_back")(tasks_back_callback)
+main_menu_handler = bot.callback_query_handler(func=lambda c: c.data == "main_menu")(main_menu_callback)
+
