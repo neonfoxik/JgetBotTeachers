@@ -55,11 +55,12 @@ class SubtaskAdmin(admin.ModelAdmin):
 
 @admin.register(UserState)
 class UserStateAdmin(admin.ModelAdmin):
-    list_display = ('user', 'state', 'updated_at')
-    search_fields = ('user__user_name', 'user__telegram_id', 'state')
+    list_display = ('get_user_name', 'state', 'updated_at')
+    search_fields = ('state',)
     list_filter = ('state', 'updated_at')
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('-updated_at',)
+    raw_id_fields = ('user',)  # Используем raw_id_fields вместо select_related
     fieldsets = (
         ('Пользователь', {
             'fields': ('user',)
@@ -72,5 +73,12 @@ class UserStateAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def get_user_name(self, obj):
+        return obj.user.user_name if obj.user else 'N/A'
+    get_user_name.short_description = 'Пользователь'
+    get_user_name.admin_order_field = 'user__user_name'
+
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user')
+        # Убрали select_related, используем raw_id_fields
+        return super().get_queryset(request)

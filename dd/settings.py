@@ -4,8 +4,9 @@ import dotenv
 from telebot.types import BotCommand
 from pathlib import Path
 
+# Load environment variables from .env file if it exists
 dotenv.load_dotenv()
-LOCAL = os.getenv('LOCAL', 'False').lower() == 'true'
+LOCAL = os.getenv('LOCAL', 'True').lower() == 'true'  # Default to True for SQLite development
 
 if not LOCAL:
     import pymysql
