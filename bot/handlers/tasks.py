@@ -21,40 +21,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 # Обработчик /start перенесен в commands.py для избежания дублирования
-def get_chat_id_from_update(update) -> str:
-    if hasattr(update, 'chat'):
-        return str(update.chat.id)
-    elif hasattr(update, 'message') and hasattr(update.message, 'chat'):
-        return str(update.message.chat.id)
-    else:
-        raise ValueError("Cannot extract chat_id from update")
+
 def create_task_command(message: Message) -> None:
     create_task_command_logic(message)
 
 def create_task_callback(call: CallbackQuery) -> None:
     create_task_command_logic(call)
-    chat_id = get_chat_id_from_update(call)
-    user = get_or_create_user(chat_id)
-    active_tasks = Task.objects.filter(
-        assignee=user,
-        status__in=['active', 'pending_review']
-    ).order_by('due_date', '-created_at')
-    if not active_tasks:
-        safe_edit_or_send_message(
-            chat_id=call.message.chat.id,
-            text="📋 У вас нет активных задач",
-            reply_markup=TASK_MANAGEMENT_MARKUP,
-            message_id=call.message.message_id
-        )
-        return
-    text = f"📋 ВАШИ АКТИВНЫЕ ЗАДАЧИ\n\n"
-    markup = get_tasks_list_markup(active_tasks, is_creator_view=False)
-    safe_edit_or_send_message(
-        chat_id=call.message.chat.id,
-        text=text,
-        reply_markup=markup,
-        message_id=call.message.message_id
-    )
 def tasks_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     user = get_or_create_user(chat_id)
@@ -114,51 +86,9 @@ def create_task_command_logic(update) -> None:
     bot.send_message(chat_id, text, reply_markup=markup)
     set_user_state(chat_id, {'state': 'waiting_task_title'})
     logger.info(f"Установлено состояние 'waiting_task_title' для пользователя {chat_id}")
-# Обработчик close_task перенесен в commands.py
-    args = message.text.split()
-    if len(args) < 2:
-        bot.send_message(message.chat.id, "❌ Использование: /close_task <ID задачи>")
-        return
-    try:
-        task_id = int(args[1])
-    except ValueError:
-        bot.send_message(message.chat.id, "❌ ID задачи должен быть числом")
-        return
-    try:
-        task = Task.objects.get(id=task_id)
-    except Task.DoesNotExist:
-        bot.send_message(message.chat.id, "❌ Задача не найдена")
-        return
-    allowed, error_msg = check_permissions(message.chat.id, task, require_creator=False)
-    if not allowed:
-        bot.send_message(message.chat.id, error_msg)
-        return
-    initiate_task_close(message.chat.id, task)
-# Обработчик task_progress перенесен в commands.py
-    args = message.text.split()
-    if len(args) < 2:
-        bot.send_message(message.chat.id, "❌ Использование: /task_progress <ID задачи>")
-        return
-    try:
-        task_id = int(args[1])
-    except ValueError:
-        bot.send_message(message.chat.id, "❌ ID задачи должен быть числом")
-        return
-    try:
-        task = Task.objects.get(id=task_id)
-    except Task.DoesNotExist:
-        bot.send_message(message.chat.id, "❌ Задача не найдена")
-        return
-    chat_id = str(message.chat.id)
-    allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
-    if not allowed:
-        bot.send_message(chat_id, error_msg)
-        return
-    user = get_or_create_user(chat_id)
-    is_creator = task.creator.telegram_id == user.telegram_id
-    is_assignee = task.assignee.telegram_id == user.telegram_id
-    show_task_progress(chat_id, task, is_creator, is_assignee)
 
+# Обработчик close_task перенесен в commands.py
+# Обработчик task_progress перенесен в commands.py
 # Обработчик debug перенесен в commands.py
 
 def initiate_task_close(chat_id: str, task: Task) -> None:
