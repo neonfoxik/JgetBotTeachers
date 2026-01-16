@@ -58,8 +58,8 @@ def create_calendar(year: int = None, month: int = None) -> tuple[str, InlineKey
                 today = now.date()
 
                 if current_date < today:
-                    # Прошедшие дни - неактивные
-                    week_buttons.append(InlineKeyboardButton(str(day), callback_data="calendar_ignore"))
+                    # Прошедшие дни - показываем уведомление при нажатии
+                    week_buttons.append(InlineKeyboardButton(str(day), callback_data=f"calendar_past_date_{year}_{month}_{day}"))
                 else:
                     # Сегодня и будущие дни - активные
                     week_buttons.append(InlineKeyboardButton(str(day), callback_data=f"calendar_date_{year}_{month}_{day}"))
@@ -183,6 +183,20 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
 
         text, markup = create_time_selector()
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+    elif data.startswith("calendar_past_date_"):
+        # Нажата прошедшая дата - показываем уведомление
+        parts = data.split("_")
+        if len(parts) == 5:
+            _, _, year, month, day = parts
+            try:
+                year, month, day = int(year), int(month), int(day)
+                date_str = f"{day:02d}.{month:02d}.{year}"
+                bot.answer_callback_query(call.id, f"❌ Дата {date_str} уже прошла", show_alert=True)
+            except ValueError:
+                bot.answer_callback_query(call.id, "❌ Прошедшая дата", show_alert=True)
+        else:
+            bot.answer_callback_query(call.id, "❌ Прошедшая дата", show_alert=True)
 
     elif data.startswith("calendar_time_"):
         # Выбрано время, сохраняем полную дату и время
