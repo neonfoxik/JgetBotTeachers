@@ -133,7 +133,7 @@ back_to_assignee_type_handler = bot.callback_query_handler(func=lambda c: c.data
 cancel_task_creation_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
 
 # Callback для календаря
-calendar_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("calendar_"))(lambda c: process_calendar_callback(c))
+calendar_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("calendar_"))(process_calendar_callback)
 
 # Callback для действий с задачами
 task_view_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_view_"))(task_view_callback)
