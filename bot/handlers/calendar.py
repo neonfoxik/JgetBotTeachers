@@ -118,27 +118,63 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
 
     if data.startswith("calendar_prev_"):
         # Предыдущий месяц
-        _, year, month = data.split("_")
-        year, month = int(year), int(month)
-        text, markup = create_calendar(year, month)
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        parts = data.split("_")
+        if len(parts) != 4:
+            logger.error(f"Неверный формат callback_data для prev: {data}")
+            return
+
+        _, _, year, month = parts
+        try:
+            year, month = int(year), int(month)
+            text, markup = create_calendar(year, month)
+            bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        except ValueError:
+            logger.error(f"Неверные числовые значения в prev: {data}")
+            return
 
     elif data.startswith("calendar_next_"):
         # Следующий месяц
-        _, year, month = data.split("_")
-        year, month = int(year), int(month)
-        text, markup = create_calendar(year, month)
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        parts = data.split("_")
+        if len(parts) != 4:
+            logger.error(f"Неверный формат callback_data для next: {data}")
+            return
+
+        _, _, year, month = parts
+        try:
+            year, month = int(year), int(month)
+            text, markup = create_calendar(year, month)
+            bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        except ValueError:
+            logger.error(f"Неверные числовые значения в next: {data}")
+            return
 
     elif data.startswith("calendar_date_"):
         # Выбрана дата, показываем время
-        _, year, month, day = data.split("_")
-        year, month, day = int(year), int(month), int(day)
+        parts = data.split("_")
+        if len(parts) != 5:
+            logger.error(f"Неверный формат callback_data для даты: {data}")
+            return
+
+        _, _, year, month, day = parts
+        try:
+            year, month, day = int(year), int(month), int(day)
+        except ValueError:
+            logger.error(f"Неверные числовые значения в дате: {data}")
+            return
 
         # Сохраняем выбранную дату в состоянии пользователя
         from bot.handlers.utils import get_user_state, set_user_state
         chat_id = str(call.message.chat.id)
         user_state = get_user_state(chat_id)
+
+        # Проверяем, не является ли выбранная дата прошедшей
+        selected_date = datetime(year, month, day).date()
+        now = timezone.now()
+        today = now.date()
+
+        if selected_date < today:
+            bot.answer_callback_query(call.id, "❌ Нельзя выбрать прошедшую дату", show_alert=True)
+            return
 
         if user_state:
             user_state['selected_date'] = f"{year}-{month:02d}-{day:02d}"
@@ -149,8 +185,17 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
 
     elif data.startswith("calendar_time_"):
         # Выбрано время, сохраняем полную дату и время
-        _, hour, minute = data.split("_")
-        hour, minute = int(hour), int(minute)
+        parts = data.split("_")
+        if len(parts) != 4:
+            logger.error(f"Неверный формат callback_data для времени: {data}")
+            return
+
+        _, _, hour, minute = parts
+        try:
+            hour, minute = int(hour), int(minute)
+        except ValueError:
+            logger.error(f"Неверные числовые значения во времени: {data}")
+            return
 
         from bot.handlers.utils import get_user_state, set_user_state
         chat_id = str(call.message.chat.id)
@@ -310,6 +355,12 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
 
     elif data == "calendar_ignore":
         # Игнорируем нажатие на заголовок или неактивные дни
+        # Просто ничего не делаем - кнопка неактивна
+        pass
+
+    else:
+        # Неизвестный callback - игнорируем
+        logger.warning(f"Неизвестный callback календаря: {data}")
         pass
 
 
