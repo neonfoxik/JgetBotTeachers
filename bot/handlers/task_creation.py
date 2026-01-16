@@ -37,12 +37,13 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
             assignee = creator
 
         with transaction.atomic():
+            due_date_parsed = parse_datetime_from_state(user_state.get('due_date'))
             task = Task.objects.create(
                 title=user_state['title'],
                 description=user_state['description'],
                 creator=creator,
                 assignee=assignee,
-                due_date=user_state.get('due_date'),
+                due_date=due_date_parsed,
             )
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"

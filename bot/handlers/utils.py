@@ -178,6 +178,33 @@ def get_chat_id_from_update(update) -> str:
     return ""
 
 
+def parse_datetime_from_state(date_value):
+    """
+    Парсит дату/время из состояния пользователя (может быть datetime или строка ISO)
+    """
+    if date_value is None:
+        return None
+    if isinstance(date_value, datetime):
+        return date_value
+    if isinstance(date_value, str):
+        try:
+            # Пробуем разные форматы
+            for fmt in ['%Y-%m-%dT%H:%M:%S.%f%z', '%Y-%m-%dT%H:%M:%S%z', '%Y-%m-%d %H:%M:%S%z', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d']:
+                try:
+                    dt = datetime.strptime(date_value, fmt)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.get_current_timezone())
+                    return dt
+                except ValueError:
+                    continue
+            # Если ничего не подошло, пробуем fromisoformat
+            return datetime.fromisoformat(date_value.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            logger.error(f"Не удалось распарсить дату: {date_value}")
+            return None
+    return date_value
+
+
 def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_assignee: bool = False, message_id: int = None) -> None:
     text = format_task_info(task, show_details=True)
     subtasks = task.subtasks.all()

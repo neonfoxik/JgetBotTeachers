@@ -115,6 +115,7 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
     context может быть "task_creation" или "task_editing_{task_id}"
     """
     data = call.data
+    logger.info(f"Обработка callback календаря: {data}, context: {context}")
 
     if data.startswith("calendar_prev_"):
         # Предыдущий месяц
@@ -232,7 +233,7 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
                     markup = None
             else:
                 # Контекст создания задачи
-                user_state['due_date'] = due_date
+                user_state['due_date'] = due_date.isoformat()  # Сохраняем как строку ISO
                 user_state['state'] = 'waiting_assignee_selection'
                 set_user_state(chat_id, user_state)
 
@@ -277,7 +278,7 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
                     text = "❌ Ошибка при обновлении срока задачи"
                     markup = None
             else:
-                user_state['due_date'] = due_date
+                user_state['due_date'] = due_date.isoformat()  # Сохраняем как строку ISO
                 user_state['state'] = 'waiting_assignee_selection'
                 set_user_state(chat_id, user_state)
 
