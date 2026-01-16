@@ -16,7 +16,7 @@ from bot.handlers import (
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
     change_assignee_callback, task_close_callback,
     handle_task_report, view_report_attachments_callback,
-    tasks_back_callback, main_menu_callback
+    tasks_back_callback, main_menu_callback, process_calendar_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -131,6 +131,9 @@ select_user_handler = bot.callback_query_handler(func=lambda c: c.data.startswit
 back_to_assignee_selection_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_selection")(back_to_assignee_selection_callback)
 back_to_assignee_type_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_type")(back_to_assignee_type_callback)
 cancel_task_creation_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
+
+# Callback для календаря
+calendar_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("calendar_"))(process_calendar_callback)
 
 # Callback для действий с задачами
 task_view_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_view_"))(task_view_callback)

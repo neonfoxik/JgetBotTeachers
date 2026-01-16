@@ -95,27 +95,9 @@ def handle_task_creation_messages(message: Message) -> None:
             user_state['description'] = None if message.text.lower() in ['пусто', 'skip', 'пропустить'] else message.text.strip()
             user_state['state'] = 'waiting_due_date'
             set_user_state(str(message.chat.id), user_state)
-            description_text = user_state['description'] or "не указано"
-            text = f"📅 Введите срок выполнения задачи в формате ДД.ММ.ГГГГ ЧЧ:ММ\n\nТекущее описание: {description_text}"
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("Без срока", callback_data="skip_due_date"))
-            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
-            bot.send_message(message.chat.id, text, reply_markup=markup)
-
-        elif state == 'waiting_due_date':
-            if message.text.lower() in ['пусто', 'skip', 'нет', 'пропустить']:
-                user_state['due_date'] = None
-            else:
-                try:
-                    due_date = datetime.strptime(message.text.strip(), '%d.%m.%Y %H:%M')
-                    user_state['due_date'] = due_date.replace(tzinfo=timezone.get_current_timezone())
-                except ValueError:
-                    bot.send_message(message.chat.id, "❌ Неверный формат даты. Используйте ДД.ММ.ГГГГ ЧЧ:ММ")
-                    return
-
-            user_state['state'] = 'waiting_assignee_selection'
-            set_user_state(str(message.chat.id), user_state)
-            show_assignee_selection_menu(str(message.chat.id), user_state)
+            # Показываем календарь вместо текстового ввода
+            from bot.handlers.calendar import show_calendar
+            show_calendar(str(message.chat.id), "task_creation")
     
     except Exception as e:
         logger.error(f"Ошибка при обработке сообщения создания задачи для {chat_id}: {e}")
@@ -131,11 +113,9 @@ def skip_description_callback(call: CallbackQuery) -> None:
         user_state['description'] = None
         user_state['state'] = 'waiting_due_date'
         set_user_state(chat_id, user_state)
-        text = f"📅 Введите срок выполнения задачи в формате ДД.ММ.ГГГГ ЧЧ:ММ\n\nТекущее описание: не указано"
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("Без срока", callback_data="skip_due_date"))
-        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
-        safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
+        # Показываем календарь вместо текстового ввода
+        from bot.handlers.calendar import show_calendar
+        show_calendar(chat_id, "task_creation", call.message.message_id)
 
 
 def skip_due_date_callback(call: CallbackQuery) -> None:

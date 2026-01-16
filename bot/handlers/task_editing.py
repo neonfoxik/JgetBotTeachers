@@ -193,17 +193,9 @@ def edit_due_date_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
-        current_due = task.due_date.strftime('%d.%m.%Y %H:%M') if task.due_date else "не установлен"
-        text = f"⏰ Введите новый срок для задачи в формате ДД.ММ.ГГГГ ЧЧ:ММ:\n\nТекущий: {current_due}"
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("Убрать срок", callback_data=f"remove_due_date_{task_id}"))
-        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data=f"task_edit_{task_id}"))
-        safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
-
-        # Устанавливаем состояние пользователя для ожидания новой даты
-        from bot.handlers.utils import set_user_state
-        user_state = {'editing_task_id': task_id, 'editing_field': 'due_date'}
-        set_user_state(chat_id, user_state)
+        # Показываем календарь вместо текстового ввода
+        from bot.handlers.calendar import show_calendar
+        show_calendar(chat_id, f"task_editing_{task_id}", call.message.message_id)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)

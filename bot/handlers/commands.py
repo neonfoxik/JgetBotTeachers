@@ -90,7 +90,8 @@ def tasks_command_logic(update) -> None:
             message_id=update.message.message_id
         )
     else:
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=update.message.message_id)
+        # Если это команда, отправляем новое сообщение
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup)
 
 def my_created_tasks_command(message: Message) -> None:
     my_created_tasks_command_logic(message)
