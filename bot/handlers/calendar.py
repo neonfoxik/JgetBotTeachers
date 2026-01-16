@@ -5,7 +5,7 @@ from bot import bot, logger
 import calendar as cal
 
 
-def create_calendar(year: int = None, month: int = None, context: str = "task_creation") -> tuple[str, InlineKeyboardMarkup]:
+def create_calendar(year: int = None, month: int = None) -> tuple[str, InlineKeyboardMarkup]:
     """
     Создает календарь для выбора даты
     """
@@ -26,16 +26,16 @@ def create_calendar(year: int = None, month: int = None, context: str = "task_cr
     # Кнопки навигации
     nav_buttons = []
     if month > 1:
-        nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year}_{month}_{context}"))
+        nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year}_{month}"))
     else:
-        nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year-1}_{12}_{context}"))
+        nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year-1}_{12}"))
 
     nav_buttons.append(InlineKeyboardButton(f"{month_names[month-1]} {year}", callback_data="calendar_ignore"))
 
     if month < 12:
-        nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year}_{month}_{context}"))
+        nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year}_{month}"))
     else:
-        nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year+1}_{1}_{context}"))
+        nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year+1}_{1}"))
 
     markup.row(*nav_buttons)
 
@@ -62,14 +62,14 @@ def create_calendar(year: int = None, month: int = None, context: str = "task_cr
                     week_buttons.append(InlineKeyboardButton(str(day), callback_data="calendar_ignore"))
                 else:
                     # Сегодня и будущие дни - активные
-                    week_buttons.append(InlineKeyboardButton(str(day), callback_data=f"calendar_date_{year}_{month}_{day}_{context}"))
+                    week_buttons.append(InlineKeyboardButton(str(day), callback_data=f"calendar_date_{year}_{month}_{day}"))
 
         markup.row(*week_buttons)
 
     # Кнопки управления
     markup.row(
-        InlineKeyboardButton("Без срока", callback_data=f"calendar_skip_date_{context}"),
-        InlineKeyboardButton("⬅️ Отмена", callback_data=f"calendar_cancel_{context}")
+        InlineKeyboardButton("Без срока", callback_data="calendar_skip_date"),
+        InlineKeyboardButton("⬅️ Отмена", callback_data="calendar_cancel")
     )
 
     text = "📅 Выберите дату выполнения задачи:"
@@ -120,13 +120,11 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
     if data.startswith("calendar_prev_"):
         # Предыдущий месяц
         parts = data.split("_")
-        if len(parts) != 5:
+        if len(parts) != 4:
             logger.error(f"Неверный формат callback_data для prev: {data}")
             return
 
-        _, _, year, month, ctx = parts
-        if ctx != context:
-            context = ctx  # Обновляем context если отличается
+        _, _, year, month = parts
         try:
             year, month = int(year), int(month)
             text, markup = create_calendar(year, month)
@@ -138,16 +136,14 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
     elif data.startswith("calendar_next_"):
         # Следующий месяц
         parts = data.split("_")
-        if len(parts) != 5:
+        if len(parts) != 4:
             logger.error(f"Неверный формат callback_data для next: {data}")
             return
 
-        _, _, year, month, ctx = parts
-        if ctx != context:
-            context = ctx
+        _, _, year, month = parts
         try:
             year, month = int(year), int(month)
-            text, markup = create_calendar(year, month, context)
+            text, markup = create_calendar(year, month)
             bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
         except ValueError:
             logger.error(f"Неверные числовые значения в next: {data}")
@@ -156,13 +152,11 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
     elif data.startswith("calendar_date_"):
         # Выбрана дата, показываем время
         parts = data.split("_")
-        if len(parts) != 6:
+        if len(parts) != 5:
             logger.error(f"Неверный формат callback_data для даты: {data}")
             return
 
-        _, _, year, month, day, ctx = parts
-        if ctx != context:
-            context = ctx
+        _, _, year, month, day = parts
         try:
             year, month, day = int(year), int(month), int(day)
         except ValueError:
@@ -188,12 +182,6 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
             set_user_state(chat_id, user_state)
 
         text, markup = create_time_selector()
-        # Добавляем context к кнопкам времени
-        if markup.keyboard:
-            for row in markup.keyboard:
-                for button in row:
-                    if hasattr(button, 'callback_data') and button.callback_data and not button.callback_data.endswith("_date"):
-                        button.callback_data = f"{button.callback_data}_{context}"
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
     elif data.startswith("calendar_time_"):
@@ -336,14 +324,9 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
             if markup:
                 bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
-    elif data.startswith("calendar_back_to_date_"):
+    elif data == "calendar_back_to_date":
         # Возврат к выбору даты
-        parts = data.split("_")
-        if len(parts) >= 4:
-            ctx = "_".join(parts[3:])  # task_creation или task_editing_123
-            if ctx != context:
-                context = ctx
-        text, markup = create_calendar(context=context)
+        text, markup = create_calendar()
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
     elif data == "calendar_cancel":
