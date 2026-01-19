@@ -14,13 +14,28 @@ from datetime import datetime
 from django.utils import timezone
 
 
-def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+def show_assignee_type_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Показывает меню выбора типа исполнителя: сам пользователь или выбор из списка"""
     text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
     text += "Кто будет исполнителем этой задачи?"
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
     markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
+
+    if call:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+    else:
+        bot.send_message(chat_id, text, reply_markup=markup)
+
+
+def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Показывает меню выбора исполнителя (старый интерфейс для обратной совместимости)"""
+    text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
+    text += "Выберите пользователя из списка или пропустите, чтобы назначить себе:"
+
+    users = list(User.objects.all())
+    markup = get_user_selection_markup(users)
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
@@ -127,7 +142,7 @@ def skip_due_date_callback(call: CallbackQuery) -> None:
         user_state['due_date'] = None
         user_state['state'] = 'waiting_assignee_selection'
         set_user_state(chat_id, user_state)
-        show_assignee_selection_menu(chat_id, user_state, call)
+        show_assignee_type_selection_menu(chat_id, user_state, call)
 
 
 def assign_to_creator_callback(call: CallbackQuery) -> None:
@@ -168,7 +183,7 @@ def choose_assignee_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
     if user_state:
-        show_assignee_selection_menu(chat_id, user_state, call)
+        show_assignee_type_selection_menu(chat_id, user_state, call)
 
 
 def user_page_callback(call: CallbackQuery) -> None:
@@ -215,6 +230,7 @@ def select_user_callback(call: CallbackQuery) -> None:
 
 
 def back_to_assignee_selection_callback(call: CallbackQuery) -> None:
+    """Возвращает к меню выбора исполнителя из списка (старый интерфейс)"""
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
     if user_state:
@@ -222,10 +238,11 @@ def back_to_assignee_selection_callback(call: CallbackQuery) -> None:
 
 
 def back_to_assignee_type_callback(call: CallbackQuery) -> None:
+    """Возвращает к меню выбора типа исполнителя"""
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
     if user_state:
-        show_assignee_selection_menu(chat_id, user_state, call)
+        show_assignee_type_selection_menu(chat_id, user_state, call)
 
 
 def cancel_task_creation_callback(call: CallbackQuery) -> None:

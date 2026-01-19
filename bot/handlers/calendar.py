@@ -251,8 +251,8 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
                 user_state['state'] = 'waiting_assignee_selection'
                 set_user_state(chat_id, user_state)
 
-                from bot.handlers.task_creation import show_assignee_selection_menu
-                show_assignee_selection_menu(chat_id, user_state, call)
+                from bot.handlers.task_creation import show_assignee_type_selection_menu
+                show_assignee_type_selection_menu(chat_id, user_state, call)
                 return  # Не отправляем сообщение, функция show_assignee_selection_menu сама обработает
 
             if markup:
@@ -296,8 +296,8 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
                 user_state['state'] = 'waiting_assignee_selection'
                 set_user_state(chat_id, user_state)
 
-                from bot.handlers.task_creation import show_assignee_selection_menu
-                show_assignee_selection_menu(chat_id, user_state, call)
+                from bot.handlers.task_creation import show_assignee_type_selection_menu
+                show_assignee_type_selection_menu(chat_id, user_state, call)
                 return
 
             if markup:
@@ -331,8 +331,8 @@ def process_calendar_callback(call, context: str = "task_creation") -> None:
                 user_state['state'] = 'waiting_assignee_selection'
                 set_user_state(chat_id, user_state)
 
-                from bot.handlers.task_creation import show_assignee_selection_menu
-                show_assignee_selection_menu(chat_id, user_state, call)
+                from bot.handlers.task_creation import show_assignee_type_selection_menu
+                show_assignee_type_selection_menu(chat_id, user_state, call)
                 return
 
             if markup:
