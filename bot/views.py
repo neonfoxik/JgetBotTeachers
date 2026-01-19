@@ -7,7 +7,6 @@ from bot.handlers import (
     create_task_command, create_task_callback,
     handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, skip_assignee_callback, choose_assignee_callback,
-    assign_to_me_callback, choose_user_from_list_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback,
     task_view_callback, task_progress_callback, task_complete_callback,
@@ -125,10 +124,8 @@ handle_task_report_handler = bot.message_handler(content_types=['text', 'photo',
 skip_description_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
 skip_due_date_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_due_date")(skip_due_date_callback)
 assign_to_creator_handler = bot.callback_query_handler(func=lambda c: c.data == "assign_to_creator")(assign_to_creator_callback)
-assign_to_me_handler = bot.callback_query_handler(func=lambda c: c.data == "assign_to_me")(assign_to_me_callback)
 skip_assignee_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_assignee")(skip_assignee_callback)
 choose_assignee_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_assignee")(choose_assignee_callback)
-choose_user_from_list_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_user_from_list")(choose_user_from_list_callback)
 user_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("user_page_"))(user_page_callback)
 select_user_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("select_user_"))(select_user_callback)
 back_to_assignee_selection_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_selection")(back_to_assignee_selection_callback)

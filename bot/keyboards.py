@@ -93,9 +93,6 @@ def get_user_selection_markup(users, page: int = 0, users_per_page: int = 5) -> 
     if nav_buttons:
         markup.add(*nav_buttons)
 
-    # Добавляем кнопку "Назад к выбору исполнителя" в конце
-    markup.add(InlineKeyboardButton("⬅️ Назад к выбору исполнителя", callback_data="back_to_assignee_type"))
-
     return markup
 def get_tasks_list_markup(tasks, is_creator_view: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
