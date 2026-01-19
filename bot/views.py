@@ -7,6 +7,7 @@ from bot.handlers import (
     create_task_command, create_task_callback,
     handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
+    add_subtask_callback, cancel_subtask_input_callback, clear_subtasks_callback, finish_subtasks_callback,
     skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback,
@@ -127,6 +128,10 @@ skip_due_date_handler = bot.callback_query_handler(func=lambda c: c.data == "ski
 assign_to_creator_handler = bot.callback_query_handler(func=lambda c: c.data == "assign_to_creator")(assign_to_creator_callback)
 assign_to_me_handler = bot.callback_query_handler(func=lambda c: c.data == "assign_to_me")(assign_to_me_callback)
 choose_user_from_list_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_user_from_list")(choose_user_from_list_callback)
+add_subtask_handler = bot.callback_query_handler(func=lambda c: c.data == "add_subtask")(add_subtask_callback)
+cancel_subtask_input_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_subtask_input")(cancel_subtask_input_callback)
+clear_subtasks_handler = bot.callback_query_handler(func=lambda c: c.data == "clear_subtasks")(clear_subtasks_callback)
+finish_subtasks_handler = bot.callback_query_handler(func=lambda c: c.data == "finish_subtasks")(finish_subtasks_callback)
 skip_assignee_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_assignee")(skip_assignee_callback)
 choose_assignee_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_assignee")(choose_assignee_callback)
 user_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("user_page_"))(user_page_callback)

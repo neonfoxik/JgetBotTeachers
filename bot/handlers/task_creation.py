@@ -3,7 +3,7 @@ from bot.handlers.utils import (
     set_user_state, clear_user_state, check_permissions, format_task_info, parse_datetime_from_state
 )
 from bot import bot, logger
-from bot.models import User, Task
+from bot.models import User, Task, Subtask
 from bot.keyboards import (
     get_user_selection_markup, TASK_MANAGEMENT_MARKUP
 )
@@ -23,6 +23,33 @@ def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQ
     markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
     markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
     markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
+
+    if call:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+    else:
+        bot.send_message(chat_id, text, reply_markup=markup)
+
+
+def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Показывает меню управления подзадачами"""
+    subtasks = user_state.get('subtasks', [])
+    text = f"📋 Подзадачи для '{user_state.get('title', '')}'\n\n"
+
+    if subtasks:
+        text += "Текущие подзадачи:\n"
+        for i, subtask in enumerate(subtasks, 1):
+            text += f"{i}. {subtask}\n"
+        text += "\n"
+    else:
+        text += "Подзадачи пока не добавлены.\n\n"
+
+    text += "Выберите действие:"
+
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("➕ Добавить подзадачу", callback_data="add_subtask"))
+    if subtasks:
+        markup.add(InlineKeyboardButton("🗑️ Очистить все подзадачи", callback_data="clear_subtasks"))
+    markup.add(InlineKeyboardButton("✅ Готово (перейти к сроку)", callback_data="finish_subtasks"))
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
@@ -63,10 +90,20 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
                 due_date=due_date_parsed,
             )
 
+            # Создаем подзадачи, если они были добавлены
+            subtasks = user_state.get('subtasks', [])
+            for subtask_title in subtasks:
+                Subtask.objects.create(
+                    task=task,
+                    title=subtask_title
+                )
+
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
             success_msg += f"👤 Исполнитель: {assignee.user_name}\n"
             if task.due_date:
                 success_msg += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}"
+            if subtasks:
+                success_msg += f"📋 Подзадач: {len(subtasks)}"
 
             return True, success_msg, TASK_MANAGEMENT_MARKUP
 
@@ -92,7 +129,7 @@ def handle_task_creation_messages(message: Message) -> None:
         logger.info(f"Текущее состояние: {state}")
         
         # Проверяем, что состояние относится к созданию задачи
-        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_due_date']:
+        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date']:
             logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
             return
 
@@ -111,12 +148,25 @@ def handle_task_creation_messages(message: Message) -> None:
 
         elif state == 'waiting_task_description':
             user_state['description'] = None if message.text.lower() in ['пусто', 'skip', 'пропустить'] else message.text.strip()
-            user_state['state'] = 'waiting_due_date'
+            user_state['subtasks'] = []  # Инициализируем список подзадач
+            user_state['state'] = 'waiting_subtasks'
             set_user_state(str(message.chat.id), user_state)
+            show_subtasks_menu(str(message.chat.id), user_state)
+
+        elif state == 'waiting_subtask_input':
+            # Добавляем введенную подзадачу к списку
+            if message.text.strip():
+                user_state['subtasks'].append(message.text.strip())
+                set_user_state(str(message.chat.id), user_state)
+                show_subtasks_menu(str(message.chat.id), user_state)
+            else:
+                bot.send_message(message.chat.id, "❌ Название подзадачи не может быть пустым. Попробуйте еще раз:")
+
+        elif state == 'waiting_due_date':
             # Показываем календарь вместо текстового ввода
             from bot.handlers.calendar import show_calendar
             show_calendar(str(message.chat.id), "task_creation")
-    
+
     except Exception as e:
         logger.error(f"Ошибка при обработке сообщения создания задачи для {chat_id}: {e}")
         import traceback
@@ -129,11 +179,10 @@ def skip_description_callback(call: CallbackQuery) -> None:
     user_state = get_user_state(chat_id)
     if user_state:
         user_state['description'] = None
-        user_state['state'] = 'waiting_due_date'
+        user_state['subtasks'] = []  # Инициализируем список подзадач
+        user_state['state'] = 'waiting_subtasks'
         set_user_state(chat_id, user_state)
-        # Показываем календарь вместо текстового ввода
-        from bot.handlers.calendar import show_calendar
-        show_calendar(chat_id, "task_creation", call.message.message_id)
+        show_subtasks_menu(chat_id, user_state, call)
 
 
 def skip_due_date_callback(call: CallbackQuery) -> None:
@@ -171,6 +220,51 @@ def choose_user_from_list_callback(call: CallbackQuery) -> None:
     user_state = get_user_state(chat_id)
     if user_state:
         show_user_selection_list(chat_id, user_state, call)
+
+
+def add_subtask_callback(call: CallbackQuery) -> None:
+    """Обработчик для кнопки 'Добавить подзадачу'"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['state'] = 'waiting_subtask_input'
+        set_user_state(chat_id, user_state)
+        text = "📝 Введите название подзадачи:"
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_subtask_input"))
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+
+
+def cancel_subtask_input_callback(call: CallbackQuery) -> None:
+    """Обработчик для отмены ввода подзадачи"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['state'] = 'waiting_subtasks'
+        set_user_state(chat_id, user_state)
+        show_subtasks_menu(chat_id, user_state, call)
+
+
+def clear_subtasks_callback(call: CallbackQuery) -> None:
+    """Обработчик для очистки всех подзадач"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['subtasks'] = []
+        set_user_state(chat_id, user_state)
+        show_subtasks_menu(chat_id, user_state, call)
+
+
+def finish_subtasks_callback(call: CallbackQuery) -> None:
+    """Обработчик для завершения ввода подзадач и перехода к сроку выполнения"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['state'] = 'waiting_due_date'
+        set_user_state(chat_id, user_state)
+        # Показываем календарь вместо текстового ввода
+        from bot.handlers.calendar import show_calendar
+        show_calendar(chat_id, "task_creation", call.message.message_id)
 
 
 def skip_assignee_callback(call: CallbackQuery) -> None:
