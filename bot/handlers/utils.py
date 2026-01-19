@@ -207,12 +207,93 @@ def parse_datetime_from_state(date_value):
 
 def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_assignee: bool = False, message_id: int = None) -> None:
     text = format_task_info(task, show_details=True)
+
     subtasks = task.subtasks.all()
     if subtasks:
-        text += "\n\n📋 ПОДЗАДАЧИ:"
+        # Добавляем прогресс-бар
+        completed_count = subtasks.filter(is_completed=True).count()
+        total_count = subtasks.count()
+        progress_percentage = int((completed_count / total_count) * 100) if total_count > 0 else 0
+
+        # Создаем прогресс-бар
+        progress_bar = create_progress_bar(progress_percentage)
+
+        text += f"\n\n📊 ПРОГРЕСС ВЫПОЛНЕНИЯ: {completed_count}/{total_count} ({progress_percentage}%)\n"
+        text += f"{progress_bar}\n"
+        text += "📋 ПОДЗАДАЧИ:"
+
+        # Показываем подзадачи
         for subtask in subtasks:
             status = "✅" if subtask.is_completed else "⏳"
             completed_date = f" ({subtask.completed_at.strftime('%d.%m.%Y')})" if subtask.completed_at else ""
             text += f"\n{status} {subtask.title}{completed_date}"
-    markup = get_task_actions_markup(task.id, task.status, task.report_attachments, is_creator, is_assignee)
+
+    # Создаем объединенную клавиатуру
+    markup = create_task_progress_markup(task, is_creator, is_assignee)
     safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id)
+
+
+def create_progress_bar(percentage: int, length: int = 10) -> str:
+    """Создает текстовый прогресс-бар"""
+    filled = int(length * percentage / 100)
+    bar = "█" * filled + "░" * (length - filled)
+    return f"[{bar}] {percentage}%"
+
+
+def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool) -> InlineKeyboardMarkup:
+    """Создает объединенную клавиатуру для просмотра задачи с подзадачами"""
+    from bot.keyboards import InlineKeyboardMarkup, InlineKeyboardButton
+
+    markup = InlineKeyboardMarkup()
+
+    # Добавляем кнопки подзадач, если они есть
+    subtasks = task.subtasks.all()
+    if subtasks:
+        for subtask in subtasks:
+            status = "✅" if subtask.is_completed else "⏳"
+            markup.add(InlineKeyboardButton(
+                f"{status} {subtask.title}",
+                callback_data=f"subtask_toggle_{task.id}_{subtask.id}"
+            ))
+
+    # Добавляем разделитель, если есть подзадачи
+    if subtasks:
+        markup.add(InlineKeyboardButton("─" * 20, callback_data="separator"))
+
+    # Добавляем основные действия с задачей
+    if task.status == 'completed':
+        markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task.id}"))
+        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
+        return markup
+
+    # Кнопка прогресса (для обновления вида)
+    btn_progress = InlineKeyboardButton("🔄 Обновить", callback_data=f"task_progress_{task.id}")
+
+    if is_assignee and task.status in ['active', 'pending_review']:
+        if task.status == 'active':
+            if is_creator:
+                btn_action = InlineKeyboardButton("✅ Отметить выполненной", callback_data=f"task_complete_{task.id}")
+            else:
+                btn_action = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task.id}")
+        else:
+            btn_action = InlineKeyboardButton("⏳ Ожидает проверки", callback_data=f"task_status_{task.id}")
+        markup.add(btn_progress, btn_action)
+    elif is_creator:
+        if task.status == 'pending_review':
+            markup.add(InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task.id}"))
+            markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task.id}"))
+        else:
+            markup.add(btn_progress)
+            markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task.id}"))
+    else:
+        markup.add(btn_progress)
+
+    # Кнопка удаления доступна для всех задач, где пользователь имеет права
+    if is_creator or is_assignee:
+        markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task.id}"))
+
+    # Вложения отчета
+    if task.report_attachments and len(task.report_attachments) > 0:
+        markup.add(InlineKeyboardButton("📎 Посмотреть вложения отчета", callback_data=f"view_report_attachments_{task.id}"))
+
+    return markup

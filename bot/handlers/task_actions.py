@@ -49,20 +49,7 @@ def task_progress_callback(call: CallbackQuery) -> None:
         user = get_or_create_user(chat_id)
         is_creator = task.creator.telegram_id == user.telegram_id
         is_assignee = task.assignee.telegram_id == user.telegram_id
-        subtasks = task.subtasks.all()
-        if subtasks:
-            text = format_task_info(task, show_details=True)
-            text += "\n\n📋 ПОДЗАДАЧИ:"
-            for subtask in subtasks:
-                status = "✅" if subtask.is_completed else "⏳"
-                completed_date = f" ({subtask.completed_at.strftime('%d.%m.%Y')})" if subtask.completed_at else ""
-                text += f"\n{status} {subtask.title}{completed_date}"
-            markup = get_subtask_toggle_markup(task.id, subtasks)
-            safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
-        else:
-            text = format_task_info(task, show_details=True)
-            markup = get_task_actions_markup(task.id, task.status, task.report_attachments, is_creator, is_assignee)
-            safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
+        show_task_progress(chat_id, task, is_creator, is_assignee, call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
@@ -193,6 +180,7 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
+        # Переключаем статус подзадачи
         subtask.is_completed = not subtask.is_completed
         if subtask.is_completed:
             subtask.completed_at = timezone.now()
@@ -200,17 +188,15 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
             subtask.completed_at = None
         subtask.save()
 
-        # Показываем обновленный список подзадач
-        subtasks = task.subtasks.all()
-        text = format_task_info(task, show_details=True)
-        text += "\n\n📋 ПОДЗАДАЧИ:"
-        for sub in subtasks:
-            status = "✅" if sub.is_completed else "⏳"
-            completed_date = f" ({sub.completed_at.strftime('%d.%m.%Y')})" if sub.completed_at else ""
-            text += f"\n{status} {sub.title}{completed_date}"
+        # Показываем обновленный вид задачи с прогрессом
+        user = get_or_create_user(chat_id)
+        is_creator = task.creator.telegram_id == user.telegram_id
+        is_assignee = task.assignee.telegram_id == user.telegram_id
+        show_task_progress(chat_id, task, is_creator, is_assignee, call.message.message_id)
 
-        markup = get_subtask_toggle_markup(task.id, subtasks)
-        safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
+        # Показываем уведомление о переключении
+        status_text = "выполнена" if subtask.is_completed else "не выполнена"
+        bot.answer_callback_query(call.id, f"✅ Подзадача отмечена как {status_text}", show_alert=False)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Подзадача не найдена", show_alert=True)
