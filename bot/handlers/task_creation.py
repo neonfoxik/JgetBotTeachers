@@ -16,10 +16,11 @@ from django.utils import timezone
 
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
-    text += "Выберите пользователя из списка или пропустите, чтобы назначить себе:"
+    text += "Кто будет исполнителем этой задачи?"
 
-    users = list(User.objects.all())
-    markup = get_user_selection_markup(users)
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
+    markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
@@ -141,6 +142,23 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
         safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id)
 
 
+def assign_to_me_callback(call: CallbackQuery) -> None:
+    """Обработчик для кнопки 'Я сам'"""
+    assign_to_creator_callback(call)
+
+
+def choose_user_from_list_callback(call: CallbackQuery) -> None:
+    """Обработчик для кнопки 'Выбрать пользователя' - показывает пагинацию всех пользователей"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        users = list(User.objects.all())
+        markup = get_user_selection_markup(users)
+        text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
+        text += "Выберите пользователя из списка:"
+        safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
+
+
 def skip_assignee_callback(call: CallbackQuery) -> None:
     # То же самое что и assign_to_creator
     assign_to_creator_callback(call)
@@ -164,7 +182,16 @@ def user_page_callback(call: CallbackQuery) -> None:
 def show_user_selection_page(call: CallbackQuery, page: int, users_per_page: int = 5) -> None:
     users = list(User.objects.all())
     markup = get_user_selection_markup(users, page, users_per_page)
-    text = f"👤 Выберите исполнителя (страница {page + 1}):"
+    # Проверяем тип users - если это QuerySet, используем count(), иначе len()
+    if hasattr(users, 'count') and not isinstance(users, list):
+        try:
+            total_users = users.count()
+        except (TypeError, AttributeError):
+            total_users = len(users)
+    else:
+        total_users = len(users)
+    total_pages = (total_users + users_per_page - 1) // users_per_page if total_users > 0 else 1
+    text = f"👤 Выберите исполнителя (страница {page + 1} из {total_pages}):"
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
 
