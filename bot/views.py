@@ -117,8 +117,8 @@ my_created_tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.
 create_task_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "create_task")(create_task_callback)
 
 # Обработка сообщений
-handle_task_creation_messages_handler = bot.message_handler(func=lambda message: not message.text.startswith('/') and not message.text.startswith('@'))(handle_task_creation_messages)
-handle_task_report_handler = bot.message_handler(content_types=['text', 'photo', 'document'])(handle_task_report)
+handle_task_creation_messages_handler = bot.message_handler(func=lambda message: message.text and not message.text.startswith('/') and not message.text.startswith('@') and not message.text.startswith('http'))(handle_task_creation_messages)
+handle_task_report_handler = bot.message_handler(content_types=['photo', 'document'])(handle_task_report)
 
 # Callback для создания задач
 skip_description_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
