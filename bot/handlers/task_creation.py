@@ -15,8 +15,25 @@ from django.utils import timezone
 
 
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Показывает меню выбора исполнителя с тремя кнопками: Я сам, Выбрать пользователя, Отмена"""
     text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
-    text += "Выберите пользователя из списка или пропустите, чтобы назначить себе:"
+    text += "Кто будет исполнителем этой задачи?"
+
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
+    markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
+    markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
+
+    if call:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+    else:
+        bot.send_message(chat_id, text, reply_markup=markup)
+
+
+def show_user_selection_list(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Показывает список всех пользователей с пагинацией"""
+    text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
+    text += "Выберите пользователя из списка:"
 
     users = list(User.objects.all())
     markup = get_user_selection_markup(users)
@@ -143,6 +160,19 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
 
 
 
+def assign_to_me_callback(call: CallbackQuery) -> None:
+    """Обработчик для кнопки 'Я сам' - назначает задачу себе"""
+    assign_to_creator_callback(call)
+
+
+def choose_user_from_list_callback(call: CallbackQuery) -> None:
+    """Обработчик для кнопки 'Выбрать пользователя' - показывает список всех пользователей"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        show_user_selection_list(chat_id, user_state, call)
+
+
 def skip_assignee_callback(call: CallbackQuery) -> None:
     # То же самое что и assign_to_creator
     assign_to_creator_callback(call)
@@ -199,7 +229,7 @@ def select_user_callback(call: CallbackQuery) -> None:
 
 
 def back_to_assignee_selection_callback(call: CallbackQuery) -> None:
-    """Возвращает к меню выбора исполнителя из списка (старый интерфейс)"""
+    """Возвращает к меню выбора исполнителя с тремя кнопками"""
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
     if user_state:

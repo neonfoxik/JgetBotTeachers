@@ -66,6 +66,10 @@ def get_subtask_toggle_markup(task_id: int, subtasks) -> InlineKeyboardMarkup:
     return markup
 def get_user_selection_markup(users, page: int = 0, users_per_page: int = 5) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
+
+    # Добавляем кнопку "Назад к выбору исполнителя" в начало
+    markup.add(InlineKeyboardButton("⬅️ Назад к выбору исполнителя", callback_data="back_to_assignee_selection"))
+
     start_idx = page * users_per_page
     end_idx = start_idx + users_per_page
     users_on_page = users[start_idx:end_idx]

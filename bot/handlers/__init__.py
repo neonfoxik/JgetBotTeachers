@@ -16,7 +16,8 @@ from .task_actions import (
 )
 from .task_creation import (
     handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
-    assign_to_creator_callback, skip_assignee_callback, choose_assignee_callback,
+    assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
+    skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback
 )
