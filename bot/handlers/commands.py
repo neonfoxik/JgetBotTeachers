@@ -22,11 +22,18 @@ def start_command(message: Message) -> None:
         )
         logger.info(f"Пользователь получен/создан: {user.user_name}")
 
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
+        markup.add(InlineKeyboardButton("➕ Создать задачу", callback_data="create_task"))
+        markup.add(InlineKeyboardButton("🎓 Пройти обучение", callback_data="start_tutorial"))
+
         welcome_text = f"""👋 Привет, {user.first_name or user.user_name}!
 
-🤖 Я бот для управления задачами. Выберите действие:"""
+🤖 Я бот для управления задачами.
 
-        bot.send_message(chat_id, welcome_text, reply_markup=main_markup)
+Если ты здесь впервые, рекомендую нажать кнопку **"🎓 Пройти обучение"**."""
+
+        bot.send_message(chat_id, welcome_text, reply_markup=markup)
         logger.info(f"Приветственное сообщение отправлено пользователю {chat_id}")
     except Exception as e:
         logger.error(f"Ошибка в обработчике /start: {e}")

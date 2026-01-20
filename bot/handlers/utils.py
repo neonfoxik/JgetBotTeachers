@@ -256,12 +256,9 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
                 callback_data=f"subtask_toggle_{task.id}_{subtask.id}"
             ))
 
-    # Добавляем разделитель, если есть подзадачи
-    if subtasks:
-        markup.add(InlineKeyboardButton("─" * 20, callback_data="separator"))
-
     # Добавляем основные действия с задачей
     if task.status == 'completed':
+        markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task.id}"))
         markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task.id}"))
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
         return markup
@@ -275,14 +272,15 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
         else:
             btn_action = InlineKeyboardButton("⏳ Ожидает проверки", callback_data=f"task_status_{task.id}")
         markup.add(btn_action)
-    elif is_creator:
-        if task.status == 'pending_review':
-            markup.add(InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task.id}"))
-            markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task.id}"))
-        else:
-            markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task.id}"))
+    
+    # Кнопка редактирования доступна всем, кто видит задачу
+    markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task.id}"))
 
-    # Кнопка удаления доступна для всех задач, где пользователь имеет права
+    if is_creator and task.status == 'pending_review':
+        markup.add(InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task.id}"))
+        markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task.id}"))
+
+    # Кнопка удаления
     if is_creator or is_assignee:
         markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task.id}"))
 
