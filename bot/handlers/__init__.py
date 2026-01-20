@@ -1,8 +1,8 @@
 # Импорты из новых модулей
 from .commands import (
-    start_command, tasks_command, my_created_tasks_command,
+    start_command, tasks_command,
     close_task_command, task_progress_command, debug_command,
-    tasks_callback, my_created_tasks_callback
+    tasks_callback
 )
 from .tasks import (
     create_task_command, create_task_callback,
@@ -31,6 +31,7 @@ from .reports import (
     handle_task_report, view_report_attachments_callback
 )
 from .main import (
-    show_task_progress, tasks_back_callback, main_menu_callback, tasks_command_logic
+    show_task_progress, tasks_back_callback, main_menu_callback
 )
+from .commands import tasks_command_logic
 from .calendar import process_calendar_callback 

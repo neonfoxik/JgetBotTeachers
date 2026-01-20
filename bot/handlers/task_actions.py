@@ -2,6 +2,7 @@ from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
     check_permissions, show_task_progress
 )
+from bot.models import Task
 
 
 def check_all_subtasks_completed(task: Task) -> tuple[bool, str]:

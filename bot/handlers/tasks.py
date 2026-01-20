@@ -234,17 +234,6 @@ def handle_task_report(message: Message) -> None:
         bot.send_message(message.chat.id, f"❌ Ошибка при отправке отчета: {e}")
     finally:
         clear_user_state(str(message.chat.id))
-def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_assignee: bool = False, message_id: int = None) -> None:
-    text = format_task_info(task, show_details=True)
-    subtasks = task.subtasks.all()
-    if subtasks:
-        text += "\n\n📋 ПОДЗАДАЧИ:"
-        for subtask in subtasks:
-            status = "✅" if subtask.is_completed else "⏳"
-            completed_date = f" ({subtask.completed_at.strftime('%d.%m.%Y')})" if subtask.completed_at else ""
-            text += f"\n{status} {subtask.title}{completed_date}"
-    markup = get_task_actions_markup(task.id, task.status, task.report_attachments, is_creator, is_assignee)
-    safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id)
 # Обработчик tasks_back перенесен в main.py
     tasks_command(call)
 # Обработчик back_to_assignee_type перенесен в task_creation.py

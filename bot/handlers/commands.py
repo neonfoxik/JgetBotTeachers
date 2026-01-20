@@ -94,53 +94,6 @@ def tasks_command_logic(update) -> None:
         # Если это команда, отправляем новое сообщение
         safe_edit_or_send_message(chat_id, text, reply_markup=markup)
 
-def my_created_tasks_command(message: Message) -> None:
-    my_created_tasks_command_logic(message)
-
-
-def my_created_tasks_callback(call: CallbackQuery) -> None:
-    # Проверяем, находится ли пользователь уже в разделе "мои задачи"
-    current_text = getattr(call.message, 'text', '') or getattr(call.message, 'caption', '') or ''
-    if "ЗАДАЧИ, СОЗДАННЫЕ ВАМИ" in current_text:
-        # Показываем уведомление, что пользователь уже в этом разделе
-        bot.answer_callback_query(
-            call.id,
-            "ℹ️ Вы уже находитесь в разделе 'Мои задачи'",
-            show_alert=False
-        )
-        return
-
-    # Вызываем логику напрямую с передачей callback объекта
-    my_created_tasks_command_logic(call)
-
-
-def my_created_tasks_command_logic(update) -> None:
-    chat_id = get_chat_id_from_update(update)
-    user = get_or_create_user(chat_id)
-
-    # Получаем задачи созданные пользователем
-    created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
-
-    if not created_tasks:
-        text = "📋 Вы еще не создали ни одной задачи"
-        markup = TASK_MANAGEMENT_MARKUP
-    else:
-        text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
-        markup = get_tasks_list_markup(created_tasks, is_creator_view=True)
-
-    # Если это callback (есть message в update), редактируем сообщение
-    if hasattr(update, 'message') and hasattr(update.message, 'message_id'):
-        bot.edit_message_text(
-            chat_id=chat_id,
-            text=text,
-            reply_markup=markup,
-            message_id=update.message.message_id
-        )
-    else:
-        # Если это команда, отправляем новое сообщение
-        bot.send_message(chat_id, text, reply_markup=markup)
-
-
 # Обработчик create_task перенесен в tasks.py для избежания дублирования
 
 
