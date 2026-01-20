@@ -122,7 +122,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
         # Проверка туториала
         from bot.handlers.utils import get_user_state
         u_state = get_user_state(chat_id)
-        if u_state.get('state') == 'tutorial_waiting_for_completion':
+        if u_state and u_state.get('state') == 'tutorial_waiting_for_completion':
             if task.id == u_state.get('tutorial_task_id'):
                 from bot.handlers.tutorial import finish_tutorial
                 finish_tutorial(chat_id)

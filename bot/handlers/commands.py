@@ -5,7 +5,7 @@ from bot import bot, logger
 from bot.models import User, Task
 from bot.keyboards import get_tasks_list_markup, TASK_MANAGEMENT_MARKUP, main_markup
 from bot.handlers.tasks import initiate_task_close
-from telebot.types import Message, CallbackQuery
+from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from django.core.exceptions import ObjectDoesNotExist
 
 
