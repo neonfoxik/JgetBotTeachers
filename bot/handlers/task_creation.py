@@ -110,6 +110,7 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
             # Логируем создание в историю
             from bot.handlers.utils import log_task_history
             log_task_history(task, creator, "Задача создана")
+            logger.info(f"Задача {task.id} успешно создана и история записана.")
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
             success_msg += f"👤 Исполнитель: {assignee.user_name}\n"
@@ -126,7 +127,7 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
             return True, success_msg, TASK_MANAGEMENT_MARKUP
 
     except Exception as e:
-        logger.error(f"Ошибка при создании задачи: {e}")
+        logger.error(f"Ошибка при создании задачи для {chat_id}: {e}", exc_info=True)
         return False, f"❌ Ошибка при создании задачи: {str(e)}", TASK_MANAGEMENT_MARKUP
 
 
@@ -357,9 +358,10 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
 
         success, msg, markup = create_task_from_state(chat_id, user_state)
         
-        # Очищаем состояние только если это не туториал
-        if user_state.get('state') != 'tutorial_waiting_for_creation' and not user_state.get('is_tutorial'):
-            clear_user_state(chat_id)
+        # Очищаем состояние только при успехе и если это не туториал
+        if success:
+            if user_state.get('state') != 'tutorial_waiting_for_creation' and not user_state.get('is_tutorial'):
+                clear_user_state(chat_id)
             
         safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
 
@@ -550,9 +552,10 @@ def select_user_callback(call: CallbackQuery) -> None:
 
             success, msg, markup = create_task_from_state(chat_id, user_state)
             
-            # Очищаем состояние только если это не туториал
-            if user_state.get('state') != 'tutorial_waiting_for_creation' and not user_state.get('is_tutorial'):
-                clear_user_state(chat_id)
+            # Очищаем состояние только при успехе и если это не туториал
+            if success:
+                if user_state.get('state') != 'tutorial_waiting_for_creation' and not user_state.get('is_tutorial'):
+                    clear_user_state(chat_id)
                 
             safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
 
