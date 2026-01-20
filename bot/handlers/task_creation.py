@@ -130,6 +130,16 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             db_name = settings.DATABASES['default']['NAME']
             success_msg += f"\n\n⚙️ Debug: DB={db_name}"
 
+            # Уведомляем исполнителя, если это не создатель
+            if creator.telegram_id != assignee.telegram_id:
+                try:
+                    notification_text = f"📋 **ВАМ НАЗНАЧЕНА НОВАЯ ЗАДАЧА**\n\n{format_task_info(task)}"
+                    # Добавляем клавиатуру действий для исполнителя
+                    markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+                    safe_edit_or_send_message(assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+                except Exception as e:
+                    logger.error(f"Не удалось уведомить исполнителя {assignee.telegram_id} о новой задаче: {e}")
+
             if user_state.get('is_tutorial') or user_state.get('state') == 'tutorial_waiting_for_creation':
                 from bot.handlers.tutorial import tutorial_task_created
                 tutorial_task_created(chat_id, task.id, message_id)
@@ -559,12 +569,11 @@ def select_user_callback(call: CallbackQuery) -> None:
                 
                 # Уведомляем нового исполнителя
                 try:
-                    bot.send_message(
-                        new_assignee.telegram_id,
-                        f"📋 ВАМ НАЗНАЧЕНА ЗАДАЧА\n\n{format_task_info(task)}"
-                    )
-                except Exception:
-                    pass
+                    notification_text = f"📋 **ВАМ НАЗНАЧЕНА ЗАДАЧА**\n\n{format_task_info(task)}"
+                    markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+                    safe_edit_or_send_message(new_assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+                except Exception as e:
+                    logger.error(f"Не удалось уведомить исполнителя {new_assignee.telegram_id}: {e}")
                 
                 clear_user_state(chat_id)
                 text = f"✅ Исполнитель задачи '{task.title}' изменен с {old_assignee.user_name} на {new_assignee.user_name}"

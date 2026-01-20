@@ -173,12 +173,11 @@ def change_assignee_callback(call: CallbackQuery) -> None:
 
         # Уведомляем нового исполнителя
         try:
-            bot.send_message(
-                new_assignee.telegram_id,
-                f"📋 ВАМ НАЗНАЧЕНА ЗАДАЧА\n\n{format_task_info(task)}"
-            )
-        except Exception:
-            pass
+            notification_text = f"📋 **ВАМ НАЗНАЧЕНА ЗАДАЧА**\n\n{format_task_info(task)}"
+            markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+            safe_edit_or_send_message(new_assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+        except Exception as e:
+            logger.error(f"Failed to notify new assignee {new_assignee.telegram_id}: {e}")
 
         from bot.handlers.utils import clear_user_state
         clear_user_state(chat_id)
