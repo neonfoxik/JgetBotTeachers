@@ -120,55 +120,15 @@ def handle_task_creation_messages(message: Message) -> None:
         user_state = get_user_state(chat_id)
         logger.info(f"Состояние пользователя {chat_id}: {user_state}")
         
-        # Проверяем, есть ли состояние и оно связано с созданием задачи
-        if not user_state or not user_state.get('state'):
-            logger.info(f"Нет активного состояния создания задачи для пользователя {chat_id}")
-            return
-        
-        state = user_state.get('state')
-        logger.info(f"Текущее состояние: {state}")
-        
-        # Проверяем, что состояние относится к созданию задачи или добавлению подзадач
-        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date'] and 'adding_subtasks_task_id' not in user_state:
-            logger.info(f"Состояние {state} не относится к созданию задачи или добавлению подзадач, пропускаем")
+        # Проверяем, есть ли состояние и оно связано с созданием задачи или добавлением подзадач
+        if not user_state:
+            logger.info(f"Нет состояния для пользователя {chat_id}")
             return
 
-        if state == 'waiting_task_title':
-            if len(message.text.strip()) < 3:
-                bot.send_message(message.chat.id, "❌ Название задачи должно содержать минимум 3 символа")
-                return
-            user_state['title'] = message.text.strip()
-            user_state['state'] = 'waiting_task_description'
-            set_user_state(str(message.chat.id), user_state)
-            text = "📝 Теперь введите описание задачи (или 'пропустить' для пустого описания):"
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("Пропустить описание", callback_data="skip_description"))
-            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
-            bot.send_message(message.chat.id, text, reply_markup=markup)
-
-        elif state == 'waiting_task_description':
-            user_state['description'] = None if message.text.lower() in ['пусто', 'skip', 'пропустить'] else message.text.strip()
-            user_state['subtasks'] = []  # Инициализируем список подзадач
-            user_state['state'] = 'waiting_subtasks'
-            set_user_state(str(message.chat.id), user_state)
-            show_subtasks_menu(str(message.chat.id), user_state)
-
-        elif state == 'waiting_subtask_input':
-            # Добавляем введенную подзадачу к списку
-            if message.text.strip():
-                user_state['subtasks'].append(message.text.strip())
-                set_user_state(str(message.chat.id), user_state)
-                show_subtasks_menu(str(message.chat.id), user_state)
-            else:
-                bot.send_message(message.chat.id, "❌ Название подзадачи не может быть пустым. Попробуйте еще раз:")
-
-        elif state == 'waiting_due_date':
-            # Показываем календарь вместо текстового ввода
-            from bot.handlers.calendar import show_calendar
-            show_calendar(str(message.chat.id), "task_creation")
-
-        # Обработка добавления подзадач к существующей задаче
-        elif 'adding_subtasks_task_id' in user_state:
+        # Проверяем на добавление подзадач к существующей задаче
+        if 'adding_subtasks_task_id' in user_state:
+            logger.info(f"Обработка добавления подзадач для пользователя {chat_id}")
+            # Обработка добавления подзадач к существующей задаче
             task_id = user_state['adding_subtasks_task_id']
             try:
                 task = Task.objects.get(id=task_id)
@@ -223,6 +183,54 @@ def handle_task_creation_messages(message: Message) -> None:
                 logger.error(f"Ошибка при добавлении подзадач: {e}")
                 bot.send_message(message.chat.id, "❌ Произошла ошибка при добавлении подзадач")
                 clear_user_state(chat_id)
+            return
+
+        # Проверяем на создание задачи
+        state = user_state.get('state')
+        if not state:
+            logger.info(f"Нет активного состояния создания задачи для пользователя {chat_id}")
+            return
+
+        logger.info(f"Текущее состояние: {state}")
+
+        # Проверяем, что состояние относится к созданию задачи
+        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date']:
+            logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
+            return
+
+        if state == 'waiting_task_title':
+            if len(message.text.strip()) < 3:
+                bot.send_message(message.chat.id, "❌ Название задачи должно содержать минимум 3 символа")
+                return
+            user_state['title'] = message.text.strip()
+            user_state['state'] = 'waiting_task_description'
+            set_user_state(str(message.chat.id), user_state)
+            text = "📝 Теперь введите описание задачи (или 'пропустить' для пустого описания):"
+            markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton("Пропустить описание", callback_data="skip_description"))
+            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
+            bot.send_message(message.chat.id, text, reply_markup=markup)
+
+        elif state == 'waiting_task_description':
+            user_state['description'] = None if message.text.lower() in ['пусто', 'skip', 'пропустить'] else message.text.strip()
+            user_state['subtasks'] = []  # Инициализируем список подзадач
+            user_state['state'] = 'waiting_subtasks'
+            set_user_state(str(message.chat.id), user_state)
+            show_subtasks_menu(str(message.chat.id), user_state)
+
+        elif state == 'waiting_subtask_input':
+            # Добавляем введенную подзадачу к списку
+            if message.text.strip():
+                user_state['subtasks'].append(message.text.strip())
+                set_user_state(str(message.chat.id), user_state)
+                show_subtasks_menu(str(message.chat.id), user_state)
+            else:
+                bot.send_message(message.chat.id, "❌ Название подзадачи не может быть пустым. Попробуйте еще раз:")
+
+        elif state == 'waiting_due_date':
+            # Показываем календарь вместо текстового ввода
+            from bot.handlers.calendar import show_calendar
+            show_calendar(str(message.chat.id), "task_creation")
 
     except Exception as e:
         logger.error(f"Ошибка при обработке сообщения создания задачи для {chat_id}: {e}")

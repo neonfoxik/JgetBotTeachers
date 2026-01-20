@@ -229,8 +229,15 @@ def add_subtasks_callback(call: CallbackQuery) -> None:
         user_state = {'adding_subtasks_task_id': task_id}
         set_user_state(chat_id, user_state)
 
-    except (ValueError, ObjectDoesNotExist):
+        # Подтверждаем callback
+        bot.answer_callback_query(call.id)
+
+    except (ValueError, ObjectDoesNotExist) as e:
+        logger.error(f"Error in add_subtasks_callback: {e}")
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+    except Exception as e:
+        logger.error(f"Unexpected error in add_subtasks_callback: {e}")
+        bot.answer_callback_query(call.id, "Произошла ошибка", show_alert=True)
 
 
 def reopen_task_callback(call: CallbackQuery) -> None:
@@ -265,5 +272,12 @@ def reopen_task_callback(call: CallbackQuery) -> None:
             except Exception as e:
                 logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")
 
-    except (ValueError, ObjectDoesNotExist):
+        # Подтверждаем callback
+        bot.answer_callback_query(call.id)
+
+    except (ValueError, ObjectDoesNotExist) as e:
+        logger.error(f"Error in reopen_task_callback: {e}")
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+    except Exception as e:
+        logger.error(f"Unexpected error in reopen_task_callback: {e}")
+        bot.answer_callback_query(call.id, "Произошла ошибка", show_alert=True)
