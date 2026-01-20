@@ -2,7 +2,7 @@
 from .commands import (
     start_command, tasks_command, my_created_tasks_command,
     close_task_command, task_progress_command, debug_command,
-    tasks_callback, my_created_tasks_callback
+    subtask_command, tasks_callback, my_created_tasks_callback
 )
 from .tasks import (
     create_task_command, create_task_callback,
@@ -15,7 +15,7 @@ from .task_actions import (
     task_close_callback
 )
 from .task_creation import (
-    handle_task_creation_reply, skip_description_callback, skip_due_date_callback,
+    handle_task_creation_reply, handle_task_creation_text, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
     add_subtask_callback, cancel_subtask_input_callback, clear_subtasks_callback, finish_subtasks_callback,
     skip_assignee_callback, choose_assignee_callback,

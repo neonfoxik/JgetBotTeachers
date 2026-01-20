@@ -206,6 +206,32 @@ def handle_task_creation_reply(message: Message) -> None:
         bot.send_message(chat_id, "❌ Произошла ошибка. Попробуйте еще раз.")
 
 
+def handle_task_creation_text(message: Message) -> None:
+    """Обработчик текстовых сообщений для создания задач"""
+    chat_id = str(message.chat.id)
+
+    # Проверяем состояние пользователя
+    user_state = get_user_state(chat_id)
+    if not user_state or not user_state.get('state'):
+        return
+
+    state = user_state.get('state')
+
+    try:
+        if state == 'waiting_subtask_input':
+            # Добавляем введенную подзадачу к списку
+            if message.text and message.text.strip():
+                user_state['subtasks'].append(message.text.strip())
+                set_user_state(chat_id, user_state)
+                show_subtasks_menu(chat_id, user_state)
+            else:
+                bot.send_message(chat_id, "❌ Название подзадачи не может быть пустым. Попробуйте еще раз:")
+
+    except Exception as e:
+        logger.error(f"Ошибка при обработке текстового сообщения для создания задачи {chat_id}: {e}")
+        bot.send_message(chat_id, "❌ Произошла ошибка. Попробуйте еще раз.")
+
+
 def skip_description_callback(call: CallbackQuery) -> None:
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
@@ -262,12 +288,10 @@ def add_subtask_callback(call: CallbackQuery) -> None:
         user_state['state'] = 'waiting_subtask_input'
         set_user_state(chat_id, user_state)
 
-        # Используем ForceReply для запроса ввода
-        from telebot.types import ForceReply
-        reply_markup = ForceReply(selective=False)
-
-        text = "📝 Введите название подзадачи:"
-        bot.send_message(chat_id, text, reply_markup=reply_markup)
+        text = "📝 Используйте команду /subtask <название> для добавления подзадачи"
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_subtask_input"))
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
 
 
 def cancel_subtask_input_callback(call: CallbackQuery) -> None:

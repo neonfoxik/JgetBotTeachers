@@ -226,42 +226,35 @@ def debug_command(message: Message) -> None:
     bot.send_message(chat_id, debug_info)
 
 
-def input_text_command(message: Message) -> None:
-    """Обработка текстового ввода для создания задач"""
+def subtask_command(message: Message) -> None:
+    """Команда для добавления подзадачи: /subtask <название>"""
     chat_id = str(message.chat.id)
-    logger.info(f"Получено сообщение от {chat_id}: '{message.text}'")
 
     try:
         user_state = get_user_state(chat_id)
-        logger.info(f"Состояние пользователя {chat_id}: {user_state}")
 
         # Проверяем, есть ли состояние и оно связано с созданием задачи
-        if not user_state or not user_state.get('state'):
-            logger.info(f"Нет активного состояния создания задачи для пользователя {chat_id}")
+        if not user_state or user_state.get('state') != 'waiting_subtask_input':
+            bot.send_message(chat_id, "❌ Сейчас нельзя добавлять подзадачи. Начните создание задачи.")
             return
 
-        state = user_state.get('state')
-        logger.info(f"Текущее состояние: {state}")
-
-        # Проверяем, что состояние относится к созданию задачи
-        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date']:
-            logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
-            return  # Явно возвращаем None
-
-        # Обрабатываем состояния создания задачи
-        from bot.handlers.task_creation import handle_task_creation_logic
-
-        # Имитируем объект message с текстом после команды
+        # Парсим текст после команды
         text_parts = message.text.split(' ', 1)
-        if len(text_parts) > 1:
-            # Создаем новый объект message с текстом без команды
-            message.text = text_parts[1]
-            handle_task_creation_logic(message)
-        else:
-            bot.send_message(chat_id, "❌ Укажите текст после команды /input_text")
+        if len(text_parts) < 2 or not text_parts[1].strip():
+            bot.send_message(chat_id, "❌ Укажите название подзадачи после команды /subtask")
+            return
+
+        subtask_title = text_parts[1].strip()
+
+        # Добавляем подзадачу
+        user_state['subtasks'].append(subtask_title)
+        set_user_state(chat_id, user_state)
+
+        from bot.handlers.task_creation import show_subtasks_menu
+        show_subtasks_menu(chat_id, user_state)
 
     except Exception as e:
-        logger.error(f"Ошибка в команде /input_text для {chat_id}: {e}")
+        logger.error(f"Ошибка в команде /subtask для {chat_id}: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        bot.send_message(chat_id, "❌ Произошла ошибка. Попробуйте позже.")
+        bot.send_message(chat_id, "❌ Произошла ошибка. Попробуйте еще раз.")
