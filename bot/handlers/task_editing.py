@@ -173,7 +173,7 @@ def change_assignee_callback(call: CallbackQuery) -> None:
 
         # Уведомляем нового исполнителя
         try:
-            notification_text = f"📋 **ВАМ НАЗНАЧЕНА ЗАДАЧА**\n\n{format_task_info(task)}"
+            notification_text = f"📋 **Вам назначена задача**\n\n{format_task_info(task)}"
             markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
             safe_edit_or_send_message(new_assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
         except Exception as e:
@@ -268,7 +268,7 @@ def reopen_task_callback(call: CallbackQuery) -> None:
             try:
                 bot.send_message(
                     task.assignee.telegram_id,
-                    f"🔄 ЗАДАЧА СНОВА АКТИВНА\n\n{format_task_info(task)}\n\nЗадача была reopened создателем."
+                    f"🔄 Задача снова активна\n\n{format_task_info(task)}\n\nЗадача была reopened создателем."
                 )
             except Exception as e:
                 logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")

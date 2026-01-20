@@ -117,7 +117,6 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             logger.info(f"Задача {task.id} успешно создана и история записана.")
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
-            success_msg += f"🆔 ID в базе: {task.id}\n"
             # Удаляем Markdown форматирование для имени, так как оно может содержать '_'
             success_msg += f"👤 Исполнитель: {assignee.user_name} (ID: {assignee.telegram_id})\n"
             if task.due_date:
@@ -129,7 +128,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             # Уведомляем исполнителя, если это не создатель
             if creator.telegram_id != assignee.telegram_id:
                 try:
-                    notification_text = f"📋 **ВАМ НАЗНАЧЕНА НОВАЯ ЗАДАЧА**\n\n{format_task_info(task)}"
+                    notification_text = f"📋 **Вам назначена новая задача**\n\n{format_task_info(task)}"
                     # Добавляем клавиатуру действий для исполнителя
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
                     safe_edit_or_send_message(assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
@@ -565,7 +564,7 @@ def select_user_callback(call: CallbackQuery) -> None:
                 
                 # Уведомляем нового исполнителя
                 try:
-                    notification_text = f"📋 **ВАМ НАЗНАЧЕНА ЗАДАЧА**\n\n{format_task_info(task)}"
+                    notification_text = f"📋 **Вам назначена задача**\n\n{format_task_info(task)}"
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
                     safe_edit_or_send_message(new_assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
                 except Exception as e:

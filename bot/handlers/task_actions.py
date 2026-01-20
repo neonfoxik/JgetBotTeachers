@@ -111,7 +111,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
 
             # Уведомляем создателя
             try:
-                creator_notification = f"📬 ВАША ЗАДАЧА ГОТОВА К ПРОВЕРКЕ\n\n{format_task_info(task)}"
+                creator_notification = f"📬 Ваша задача готова к проверке\n\n{format_task_info(task)}"
                 markup = get_task_actions_markup(task.id, task.status, task.report_attachments, True, False)
                 bot.send_message(task.creator.telegram_id, creator_notification, reply_markup=markup)
             except Exception as e:
@@ -158,7 +158,7 @@ def task_confirm_callback(call: CallbackQuery) -> None:
 
         # Уведомляем исполнителя
         try:
-            assignee_notification = f"🎉 ВАША ЗАДАЧА ПОДТВЕРЖДЕНА!\n\n{format_task_info(task)}"
+            assignee_notification = f"🎉 Ваша задача подтверждена!\n\n{format_task_info(task)}"
             bot.send_message(task.assignee.telegram_id, assignee_notification)
         except Exception as e:
             logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")
@@ -192,7 +192,7 @@ def task_reject_callback(call: CallbackQuery) -> None:
 
         # Уведомляем исполнителя
         try:
-            assignee_notification = f"🔄 ВАША ЗАДАЧА ВОЗВРАЩЕНА НА ДОРАБОТКУ\n\n{format_task_info(task)}\n\n💬 Комментарий: Нужно доработать"
+            assignee_notification = f"🔄 Ваша задача возвращена на доработку\n\n{format_task_info(task)}\n\n💬 Комментарий: Нужно доработать"
             markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
             bot.send_message(task.assignee.telegram_id, assignee_notification, reply_markup=markup)
         except Exception as e:
@@ -315,10 +315,10 @@ def task_status_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
-        status_info = f"📊 СТАТУС ЗАДАЧИ\n\n{format_task_info(task, show_details=True)}"
+        status_info = f"📊 Статус задачи\n\n{format_task_info(task, show_details=True)}"
 
         if task.status == 'pending_review' and task.report_text:
-            status_info += f"\n📄 ОТЧЕТ ИСПОЛНИТЕЛЯ:\n{task.report_text}"
+            status_info += f"\n📄 Отчет исполнителя:\n{task.report_text}"
 
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
                                        task.creator.telegram_id == chat_id,

@@ -133,7 +133,7 @@ def finish_report_callback(call: CallbackQuery) -> None:
 
 def notify_creator_about_report(task: Task) -> None:
     try:
-        creator_text = f"📬 **ВАША ЗАДАЧА ГОТОВА К ПРОВЕРКЕ**\n\n{format_task_info(task)}\n\n"
+        creator_text = f"📬 **Ваша задача готова к проверке**\n\n{format_task_info(task)}\n\n"
         if task.report_text:
             creator_text += f"📄 Отчет исполнителя:\n{task.report_text}\n"
 

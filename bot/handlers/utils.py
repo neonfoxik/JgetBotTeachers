@@ -161,7 +161,7 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
         'cancelled': '❌ Отменена'
     }.get(task.status, '❓ Неизвестный статус')
 
-    text = f"📋 ЗАДАЧА #{task.id}\n\n"
+    text = f"📋 Задача\n\n"
     text += f"📝 Название: {task.title}\n"
     text += f"📊 Статус: {status_text}\n"
     text += f"👤 Создатель: {task.creator.user_name}\n"
@@ -180,12 +180,12 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
         text += f"✅ Завершена: {task.closed_at.strftime('%d.%m.%Y %H:%M')}\n"
 
     if task.status == 'pending_review' and task.report_text:
-        text += f"\n📄 ОТЧЕТ ИСПОЛНИТЕЛЯ:\n{task.report_text}\n"
+        text += f"\n📄 Отчет исполнителя:\n{task.report_text}\n"
 
     # Добавляем комментарии
     comments = task.comments.all().order_by('-created_at')[:3]
     if comments:
-        text += "\n💬 ПОСЛЕДНИЕ КОММЕНТАРИИ:"
+        text += "\n💬 Последние комментарии:"
         for comment in comments:
             text += f"\n▫️ {comment.author.user_name}: {comment.text}"
         text += "\n"
