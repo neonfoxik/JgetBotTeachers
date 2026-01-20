@@ -3,9 +3,9 @@ from asgiref.sync import sync_to_async
 from bot.handlers import (
     start_command, tasks_command, my_created_tasks_command,
     close_task_command, task_progress_command, debug_command,
-    subtask_command, tasks_callback, my_created_tasks_callback,
+    tasks_callback, my_created_tasks_callback,
     create_task_command, create_task_callback,
-    handle_task_creation_reply, handle_task_creation_text, skip_description_callback, skip_due_date_callback,
+    handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
     add_subtask_callback, cancel_subtask_input_callback, clear_subtasks_callback, finish_subtasks_callback,
     skip_assignee_callback, choose_assignee_callback,
@@ -112,16 +112,14 @@ close_task_command_handler = bot.message_handler(commands=["close_task"])(close_
 task_progress_command_handler = bot.message_handler(commands=["task_progress"])(task_progress_command)
 debug_command_handler = bot.message_handler(commands=["debug"])(debug_command)
 create_task_command_handler = bot.message_handler(commands=["create_task"])(create_task_command)
-subtask_command_handler = bot.message_handler(commands=["subtask"])(subtask_command)
 
 # Callback для команд
 tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "tasks")(tasks_callback)
 my_created_tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")(my_created_tasks_callback)
 create_task_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "create_task")(create_task_callback)
 
-# Обработка сообщений - отключаем все глобальные обработчики
-# handle_task_creation_text_handler = bot.message_handler(func=lambda message: message.text and not message.text.startswith('/') and not message.text.startswith('@') and not message.text.startswith('http') and not any(char in message.text for char in ['www.', 'https://', '.com', '.ru', '.org']))(handle_task_creation_text)
-# handle_task_creation_reply_handler = bot.message_handler(func=lambda message: message.reply_to_message is not None)(handle_task_creation_reply)
+# Обработка сообщений
+handle_task_creation_messages_handler = bot.message_handler(func=lambda message: message.text and not message.text.startswith('/') and not message.text.startswith('@') and not message.text.startswith('http'))(handle_task_creation_messages)
 handle_task_report_handler = bot.message_handler(content_types=['photo', 'document'])(handle_task_report)
 
 # Callback для создания задач

@@ -1,11 +1,14 @@
 import os
 from os import getenv
 import dotenv
-from telebot.types import BotCommand
 from pathlib import Path
 
 # Load environment variables from .env file if it exists
-dotenv.load_dotenv()
+try:
+    dotenv.load_dotenv()
+except PermissionError:
+    # Ignore permission errors in sandboxed environments
+    pass
 LOCAL = os.getenv('LOCAL', 'True').lower() == 'true'  # Default to True for SQLite development
 
 if not LOCAL:
@@ -19,14 +22,24 @@ ALLOWED_HOSTS = ["*"]
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 HOOK = os.getenv('HOOK')
 OWNER_ID = os.getenv('OWNER_ID')
-BOT_COMMANDS = [
-    BotCommand("tasks", "Мои активные задачи"),
-    BotCommand("my_created_tasks", "Созданные мной задачи"),
-    BotCommand("create_task", "Создать новую задачу"),
-    BotCommand("close_task", "Закрыть задачу"),
-    BotCommand("task_progress", "Показать прогресс задачи"),
-    BotCommand("debug", "Отладочная информация"),
-]
+
+def get_bot_commands():
+    """Lazy load bot commands to avoid telebot import during Django setup"""
+    try:
+        from telebot.types import BotCommand
+        return [
+            BotCommand("tasks", "Мои активные задачи"),
+            BotCommand("my_created_tasks", "Созданные мной задачи"),
+            BotCommand("create_task", "Создать новую задачу"),
+            BotCommand("close_task", "Закрыть задачу"),
+            BotCommand("task_progress", "Показать прогресс задачи"),
+            BotCommand("debug", "Отладочная информация"),
+        ]
+    except (ImportError, PermissionError):
+        return []
+
+# BOT_COMMANDS will be evaluated lazily when accessed
+BOT_COMMANDS = None
 INSTALLED_APPS = [
     'bot',
     'django.contrib.admin',

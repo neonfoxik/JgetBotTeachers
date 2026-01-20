@@ -1,9 +1,10 @@
 from bot.handlers.utils import (
-    get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info
+    get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info, check_permissions, show_task_progress
 )
 from bot import bot, logger
 from bot.models import User, Task
 from bot.keyboards import get_tasks_list_markup, TASK_MANAGEMENT_MARKUP, main_markup
+from bot.handlers.tasks import initiate_task_close
 from telebot.types import Message, CallbackQuery
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -224,37 +225,3 @@ def debug_command(message: Message) -> None:
 """
 
     bot.send_message(chat_id, debug_info)
-
-
-def subtask_command(message: Message) -> None:
-    """Команда для добавления подзадачи: /subtask <название>"""
-    chat_id = str(message.chat.id)
-
-    try:
-        user_state = get_user_state(chat_id)
-
-        # Проверяем, есть ли состояние и оно связано с созданием задачи
-        if not user_state or user_state.get('state') != 'waiting_subtask_input':
-            bot.send_message(chat_id, "❌ Сейчас нельзя добавлять подзадачи. Начните создание задачи.")
-            return
-
-        # Парсим текст после команды
-        text_parts = message.text.split(' ', 1)
-        if len(text_parts) < 2 or not text_parts[1].strip():
-            bot.send_message(chat_id, "❌ Укажите название подзадачи после команды /subtask")
-            return
-
-        subtask_title = text_parts[1].strip()
-
-        # Добавляем подзадачу
-        user_state['subtasks'].append(subtask_title)
-        set_user_state(chat_id, user_state)
-
-        from bot.handlers.task_creation import show_subtasks_menu
-        show_subtasks_menu(chat_id, user_state)
-
-    except Exception as e:
-        logger.error(f"Ошибка в команде /subtask для {chat_id}: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        bot.send_message(chat_id, "❌ Произошла ошибка. Попробуйте еще раз.")
