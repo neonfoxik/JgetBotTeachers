@@ -114,13 +114,14 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
             success_msg += f"🆔 ID в базе: {task.id}\n"
+            # Удаляем Markdown форматирование для имени, так как оно может содержать '_'
             success_msg += f"👤 Исполнитель: {assignee.user_name} (ID: {assignee.telegram_id})\n"
             if task.due_date:
                 success_msg += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}"
             if subtasks:
                 success_msg += f"📋 Подзадач: {len(subtasks)}"
             
-            # Временно добавим отладочную инфо о БД
+            # Временно добавим отладочную инфо о БД (без Markdown)
             from django.conf import settings
             db_name = settings.DATABASES['default']['NAME']
             success_msg += f"\n\n⚙️ Debug: DB={db_name}"

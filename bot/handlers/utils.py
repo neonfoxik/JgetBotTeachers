@@ -34,11 +34,22 @@ def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, messag
         else:
             bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
     except ApiTelegramException as e:
-        logger.warning(f"Failed to edit message {message_id} in chat {chat_id}: {e}")
+        # Если ошибка в парсинге сущностей (Markdown), пробуем без parse_mode
+        if "can't parse entities" in str(e).lower():
+            try:
+                if message_id:
+                    bot.edit_message_text(chat_id=chat_id, text=text, reply_markup=reply_markup, message_id=message_id)
+                else:
+                    bot.send_message(chat_id, text, reply_markup=reply_markup)
+                return
+            except Exception:
+                pass
+        
+        logger.warning(f"Failed to handle message for chat {chat_id}: {e}")
         try:
-            bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
+            bot.send_message(chat_id, text, reply_markup=reply_markup)
         except Exception as send_e:
-            logger.error(f"Failed to send message to chat {chat_id}: {send_e}")
+            logger.error(f"Ultimate failure sending message to {chat_id}: {send_e}")
 
 
 def get_user_state(chat_id) -> dict:
