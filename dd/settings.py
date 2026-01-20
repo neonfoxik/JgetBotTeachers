@@ -28,12 +28,7 @@ def get_bot_commands():
     try:
         from telebot.types import BotCommand
         return [
-            BotCommand("tasks", "Мои активные задачи"),
-            BotCommand("my_created_tasks", "Созданные мной задачи"),
-            BotCommand("create_task", "Создать новую задачу"),
-            BotCommand("close_task", "Закрыть задачу"),
-            BotCommand("task_progress", "Показать прогресс задачи"),
-            BotCommand("debug", "Отладочная информация"),
+            # Меню команд очищено, оставлена только возможность использования команд вручную
         ]
     except (ImportError, PermissionError):
         return []
