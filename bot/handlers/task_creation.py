@@ -113,11 +113,17 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
             logger.info(f"Задача {task.id} успешно создана и история записана.")
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
-            success_msg += f"👤 Исполнитель: {assignee.user_name}\n"
+            success_msg += f"🆔 ID в базе: {task.id}\n"
+            success_msg += f"👤 Исполнитель: {assignee.user_name} (ID: {assignee.telegram_id})\n"
             if task.due_date:
                 success_msg += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}"
             if subtasks:
                 success_msg += f"📋 Подзадач: {len(subtasks)}"
+            
+            # Временно добавим отладочную инфо о БД
+            from django.conf import settings
+            db_name = settings.DATABASES['default']['NAME']
+            success_msg += f"\n\n⚙️ Debug: DB={db_name}"
 
             if user_state.get('is_tutorial') or user_state.get('state') == 'tutorial_waiting_for_creation':
                 from bot.handlers.tutorial import tutorial_task_created
