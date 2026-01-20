@@ -5,7 +5,7 @@ from bot.handlers.utils import (
 from bot import bot, logger
 from bot.models import User, Task, Subtask
 from bot.keyboards import (
-    get_user_selection_markup, TASK_MANAGEMENT_MARKUP
+    get_user_selection_markup, TASK_MANAGEMENT_MARKUP, get_task_actions_markup
 )
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -125,10 +125,6 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             if subtasks:
                 success_msg += f"📋 Подзадач: {len(subtasks)}"
             
-            # Временно добавим отладочную инфо о БД (без Markdown)
-            from django.conf import settings
-            db_name = settings.DATABASES['default']['NAME']
-            success_msg += f"\n\n⚙️ Debug: DB={db_name}"
 
             # Уведомляем исполнителя, если это не создатель
             if creator.telegram_id != assignee.telegram_id:
