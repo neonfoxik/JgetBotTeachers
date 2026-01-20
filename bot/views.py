@@ -5,7 +5,7 @@ from bot.handlers import (
     close_task_command, task_progress_command, debug_command,
     tasks_callback, my_created_tasks_callback,
     create_task_command, create_task_callback,
-    handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
+    handle_task_creation_reply, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
     add_subtask_callback, cancel_subtask_input_callback, clear_subtasks_callback, finish_subtasks_callback,
     skip_assignee_callback, choose_assignee_callback,
@@ -119,7 +119,7 @@ my_created_tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.
 create_task_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "create_task")(create_task_callback)
 
 # Обработка сообщений
-handle_task_creation_messages_handler = bot.message_handler(func=lambda message: message.text and not message.text.startswith('/') and not message.text.startswith('@') and not message.text.startswith('http'))(handle_task_creation_messages)
+handle_task_creation_reply_handler = bot.message_handler(func=lambda message: message.reply_to_message and message.reply_to_message.from_user.id == bot.get_me().id)(handle_task_creation_reply)
 handle_task_report_handler = bot.message_handler(content_types=['photo', 'document'])(handle_task_report)
 
 # Callback для создания задач

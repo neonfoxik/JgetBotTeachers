@@ -224,3 +224,44 @@ def debug_command(message: Message) -> None:
 """
 
     bot.send_message(chat_id, debug_info)
+
+
+def input_text_command(message: Message) -> None:
+    """Обработка текстового ввода для создания задач"""
+    chat_id = str(message.chat.id)
+    logger.info(f"Получено сообщение от {chat_id}: '{message.text}'")
+
+    try:
+        user_state = get_user_state(chat_id)
+        logger.info(f"Состояние пользователя {chat_id}: {user_state}")
+
+        # Проверяем, есть ли состояние и оно связано с созданием задачи
+        if not user_state or not user_state.get('state'):
+            logger.info(f"Нет активного состояния создания задачи для пользователя {chat_id}")
+            return
+
+        state = user_state.get('state')
+        logger.info(f"Текущее состояние: {state}")
+
+        # Проверяем, что состояние относится к созданию задачи
+        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date']:
+            logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
+            return  # Явно возвращаем None
+
+        # Обрабатываем состояния создания задачи
+        from bot.handlers.task_creation import handle_task_creation_logic
+
+        # Имитируем объект message с текстом после команды
+        text_parts = message.text.split(' ', 1)
+        if len(text_parts) > 1:
+            # Создаем новый объект message с текстом без команды
+            message.text = text_parts[1]
+            handle_task_creation_logic(message)
+        else:
+            bot.send_message(chat_id, "❌ Укажите текст после команды /input_text")
+
+    except Exception as e:
+        logger.error(f"Ошибка в команде /input_text для {chat_id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        bot.send_message(chat_id, "❌ Произошла ошибка. Попробуйте позже.")
