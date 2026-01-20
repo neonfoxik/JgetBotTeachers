@@ -18,7 +18,7 @@ from bot.handlers import (
     task_edit_callback, edit_title_callback, edit_description_callback,
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
     change_assignee_callback, task_close_callback,
-    handle_task_report, view_report_attachments_callback,
+    handle_task_report, view_report_attachments_callback, view_task_attachments_callback,
     tasks_back_callback, main_menu_callback, process_calendar_callback,
     add_subtasks_callback, reopen_task_callback,
     start_tutorial_callback
