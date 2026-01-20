@@ -107,12 +107,26 @@ def my_created_tasks_command_logic(update) -> None:
 def create_task_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     logger.info(f"Начало создания задачи для пользователя {chat_id}")
-    user = get_or_create_user(chat_id)
-    text = "📝 СОЗДАНИЕ НОВОЙ ЗАДАЧИ\n\n🎯 Введите название задачи:"
+    
+    user_state = get_user_state(chat_id) or {}
+    is_tutorial = user_state.get('state') == 'tutorial_waiting_for_creation'
+    
+    text = "📝 **ШАГ 1: НАЗВАНИЕ**\n\n🎯 Введите название задачи.\n\n"
+    if is_tutorial:
+        text += "_Например: 'Купить продукты' или 'Подготовить отчет'. Это то, что будет отображаться в списке._"
+    else:
+        text += "Введите краткое описание того, что нужно сделать:"
+        
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="main_menu"))
-    bot.send_message(chat_id, text, reply_markup=markup)
-    set_user_state(chat_id, {'state': 'waiting_task_title'})
+    
+    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+    
+    new_state = {'state': 'waiting_task_title'}
+    if is_tutorial:
+        new_state['is_tutorial'] = True
+        
+    set_user_state(chat_id, new_state)
     logger.info(f"Установлено состояние 'waiting_task_title' для пользователя {chat_id}")
 
 # Обработчик close_task перенесен в commands.py

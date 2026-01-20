@@ -383,17 +383,25 @@ def process_calendar_callback(call) -> None:
 
 
 def show_calendar(chat_id: str, context: str = "task_creation", message_id: int = None) -> None:
-    """
+    \"\"\"
     Показывает календарь пользователю
-    """
+    \"\"\"
     from bot.handlers.utils import get_user_state, set_user_state
     user_state = get_user_state(chat_id)
     user_state['calendar_context'] = context
     set_user_state(chat_id, user_state)
 
     text, markup = create_calendar()
+    
+    if user_state and user_state.get('is_tutorial'):
+        text = "📅 **ШАГ 5: СРОК ВЫПОЛНЕНИЯ**\n\nТы можешь указать дату и время, до которых задачу нужно выполнить. Это удобно для планирования.\n\n" + text
+        text += \"\n\n_Выбери дату на календаре или нажми 'Пропустить срок'._\"
+        markup.add(InlineKeyboardButton(\"Пропустить срок\", callback_data=\"skip_due_date\"))
 
     if message_id:
-        bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
+        try:
+            bot.edit_message_text(text, chat_id, message_id, reply_markup=markup, parse_mode='Markdown')
+        except Exception:
+            bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
     else:
-        bot.send_message(chat_id, text, reply_markup=markup)
+        bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')

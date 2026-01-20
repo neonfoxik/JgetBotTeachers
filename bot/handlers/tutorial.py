@@ -6,51 +6,60 @@ from bot.keyboards import main_markup, TASK_MANAGEMENT_MARKUP
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 def start_tutorial(chat_id: str, message_id: int = None) -> None:
-    text = """🎓 ДОБРО ПОЖАЛОВАТЬ В ОБУЧЕНИЕ!
+    text = """👋 **Привет! Я — твой личный помощник по задачам.**
 
-Я помогу тебе освоиться. Давай создадим твою первую задачу и выполним её.
+Давай я быстро научу тебя основам. Работа в боте строится всего на трёх шагах:
+1️⃣ **Создание**: пишем, что нужно сделать.
+2️⃣ **Назначение**: выбираем, КТО это сделает.
+3️⃣ **Выполнение**: отмечаем результат.
 
-Шаг 1: Нажми кнопку "➕ Создать задачу" ниже."""
+Начнём? Нажми кнопку ниже, чтобы создать твою первую задачу!"""
     
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("➕ Создать задачу", callback_data="create_task"))
+    markup.add(InlineKeyboardButton("🚀 Начать создание", callback_data="create_task"))
     
-    set_user_state(chat_id, {'state': 'tutorial_waiting_for_creation'})
+    set_user_state(chat_id, {
+        'state': 'tutorial_waiting_for_creation',
+        'tutorial_step': 'start'
+    })
     
     if message_id:
-        bot.edit_message_text(text, chat_id, message_id, reply_markup=markup)
+        bot.edit_message_text(text, chat_id, message_id, reply_markup=markup, parse_mode='Markdown')
     else:
-        bot.send_message(chat_id, text, reply_markup=markup)
+        bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
 
 def tutorial_task_created(chat_id: str, task_id: int) -> None:
-    text = f"""✅ Отлично! Первая задача создана.
+    text = f"""✨ **Ура! Твоя первая задача создана.**
 
-Теперь давай её выполним. Это самый важный этап!
+Ты только что прошёл этапы ввода названия, описания и выбора исполнителя. 
 
-Шаг 2: Нажми на кнопку "📋 Посмотреть задачу", а затем выбери "✅ Отметить выполненной"."""
+Теперь самое важное — **контроль**. Давай посмотрим, как выглядит твоя задача "изнутри". Там ты сможешь управлять подзадачами или завершить её.
+
+👇 Нажми на кнопку «Посмотреть задачу»:"""
     
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("📋 Посмотреть задачу", callback_data=f"task_progress_{task_id}"))
     
     set_user_state(chat_id, {
         'state': 'tutorial_waiting_for_completion',
-        'tutorial_task_id': task_id
+        'tutorial_task_id': task_id,
+        'tutorial_step': 'view_task'
     })
     
-    bot.send_message(chat_id, text, reply_markup=markup)
+    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
 
 def finish_tutorial(chat_id: str) -> None:
-    text = """🎉 ПОЗДРАВЛЯЮ!
+    text = """🎉 **Поздравляю! Ты — мастер задач!**
 
-Ты прошел краткий курс обучения. Теперь ты умеешь:
-✅ Создавать задачи
-✅ Назначать их (в туториале ты назначил её себе)
-✅ Отмечать выполнение
+Теперь ты знаешь всё необходимое:
+✅ Как ставить задачи.
+✅ Как следить за их выполнением.
+✅ Как закрывать их.
 
-Удачи в работе! Используй главное меню для управления задачами."""
+Если возникнут вопросы — я всегда рядом. Удачи в делах! 🚀"""
     
     clear_user_state(chat_id)
-    bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
+    bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, parse_mode='Markdown')
 
 def start_tutorial_callback(call: CallbackQuery) -> None:
     chat_id = str(call.message.chat.id)

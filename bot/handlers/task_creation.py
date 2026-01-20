@@ -16,8 +16,11 @@ from django.utils import timezone
 
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню выбора исполнителя с тремя кнопками: Я сам, Выбрать пользователя, Отмена"""
-    text = f"👤 Выберите исполнителя для задачи '{user_state.get('title', '')}'\n\n"
-    text += "Кто будет исполнителем этой задачи?"
+    text = "👤 **ШАГ 4: ИСПОЛНИТЕЛЬ**\n\n"
+    if user_state.get('is_tutorial'):
+        text += "Теперь нужно выбрать, КТО будет выполнять задачу. Ты можешь назначить её **себе** или любому другому пользователю бота.\n\n_Нажми 'Я сам', чтобы продолжить обучение._"
+    else:
+        text += f"Выберите исполнителя для задачи '{user_state.get('title', '')}':"
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
@@ -25,25 +28,31 @@ def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQ
     markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
 
     if call:
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
     else:
-        bot.send_message(chat_id, text, reply_markup=markup)
+        bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
 
 
 def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню управления подзадачами"""
     subtasks = user_state.get('subtasks', [])
-    text = f"📋 Подзадачи для '{user_state.get('title', '')}'\n\n"
+    
+    text = "📋 **ШАГ 3: ПОДЗАДАЧИ**\n\n"
+    if user_state.get('is_tutorial'):
+        text += "Большие задачи лучше делить на части. Ты можешь добавить несколько пунктов, которые нужно выполнить.\n\n"
+    else:
+        text += f"Подзадачи для '{user_state.get('title', '')}':\n\n"
 
     if subtasks:
-        text += "Текущие подзадачи:\n"
+        text += "**Текущие подзадачи:**\n"
         for i, subtask in enumerate(subtasks, 1):
             text += f"{i}. {subtask}\n"
         text += "\n"
     else:
-        text += "Подзадачи пока не добавлены.\n\n"
-
-    text += "Выберите действие:"
+        if user_state.get('is_tutorial'):
+            text += "_Подзадачи пока не добавлены. Попробуй добавить одну или нажми 'Готово'._\n\n"
+        else:
+            text += "Подзадачи пока не добавлены.\n\n"
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("➕ Добавить подзадачу", callback_data="add_subtask"))
@@ -52,9 +61,9 @@ def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = Non
     markup.add(InlineKeyboardButton("✅ Готово (перейти к сроку)", callback_data="finish_subtasks"))
 
     if call:
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
     else:
-        bot.send_message(chat_id, text, reply_markup=markup)
+        bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
 
 
 def show_user_selection_list(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
@@ -105,7 +114,7 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
             if subtasks:
                 success_msg += f"📋 Подзадач: {len(subtasks)}"
 
-            if user_state.get('state') == 'tutorial_waiting_for_creation':
+            if user_state.get('is_tutorial') or user_state.get('state') == 'tutorial_waiting_for_creation':
                 from bot.handlers.tutorial import tutorial_task_created
                 tutorial_task_created(chat_id, task.id)
                 return True, success_msg, None # Tutorial handles its own message
@@ -247,11 +256,17 @@ def handle_task_creation_messages(message: Message) -> None:
             user_state['title'] = message.text.strip()
             user_state['state'] = 'waiting_task_description'
             set_user_state(str(message.chat.id), user_state)
-            text = "📝 Теперь введите описание задачи (или 'пропустить' для пустого описания):"
+            
+            text = "📝 **ШАГ 2: ОПИСАНИЕ**\n\nТеперь введи подробности задачи или нажми 'Пропустить'.\n\n"
+            if user_state.get('is_tutorial'):
+                text += "_Здесь можно написать детали: что именно нужно сделать, какие-то ссылки или важные заметки._"
+            else:
+                text += "Введите описание задачи:"
+                
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton("Пропустить описание", callback_data="skip_description"))
             markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
-            bot.send_message(message.chat.id, text, reply_markup=markup)
+            bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
         elif state == 'waiting_task_description':
             user_state['description'] = None if message.text.lower() in ['пусто', 'skip', 'пропустить'] else message.text.strip()
