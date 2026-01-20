@@ -25,7 +25,8 @@ def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQ
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
     markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
-    markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
+    if not user_state.get('is_tutorial'):
+        markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -58,7 +59,10 @@ def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = Non
     markup.add(InlineKeyboardButton("➕ Добавить подзадачу", callback_data="add_subtask"))
     if subtasks:
         markup.add(InlineKeyboardButton("🗑️ Очистить все подзадачи", callback_data="clear_subtasks"))
-    markup.add(InlineKeyboardButton("✅ Готово (перейти к сроку)", callback_data="finish_subtasks"))
+    markup.add(InlineKeyboardButton("✅ Готово", callback_data="finish_subtasks"))
+
+    if not user_state.get('is_tutorial'):
+        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -277,7 +281,8 @@ def handle_task_creation_messages(message: Message) -> None:
                 
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton("Пропустить описание", callback_data="skip_description"))
-            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
+            if not user_state.get('is_tutorial'):
+                markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
             bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
         elif state == 'waiting_task_description':
@@ -449,7 +454,8 @@ def show_attachments_menu(chat_id: str, user_state: dict, call: CallbackQuery = 
     if attachments:
         markup.add(InlineKeyboardButton("🗑️ Очистить список", callback_data="clear_attachments"))
     markup.add(InlineKeyboardButton("✅ Готово", callback_data="finish_attachments"))
-    markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
+    if not user_state.get('is_tutorial'):
+        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="cancel_task_creation"))
     
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')

@@ -25,17 +25,15 @@ def start_command(message: Message) -> None:
         )
         logger.info(f"Пользователь получен/создан: {user.user_name}")
 
-        if not user_exists:
-            # Если пользователь новый - принудительный запуск туториала
-            from bot.handlers.tutorial import start_tutorial
-            start_tutorial(chat_id)
-            return
-
-        # Если пользователь уже есть - показываем обычное меню без кнопки тутора
+        # Меню с проверкой туториала
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
         markup.add(InlineKeyboardButton("➕ Создать задачу", callback_data="create_task"))
         markup.add(InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks"))
+        
+        # Если туториал не пройден - добавляем кнопку
+        if not user.is_tutorial_finished:
+            markup.add(InlineKeyboardButton("🎓 Пройти обучение", callback_data="start_tutorial"))
 
         welcome_text = f"""👋 Привет, {user.first_name or user.user_name}!
 

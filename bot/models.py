@@ -27,6 +27,14 @@ class User(models.Model):
         default='UTC',
         verbose_name='Часовой пояс'
     )
+    is_tutorial_finished = models.BooleanField(
+        default=False,
+        verbose_name='Обучение пройдено'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата регистрации'
+    )
     def __str__(self):
         return f"{self.user_name} ({'Админ' if self.is_admin else 'Учитель'})"
     class Meta:

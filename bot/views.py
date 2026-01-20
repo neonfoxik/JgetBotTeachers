@@ -22,7 +22,7 @@ from bot.handlers import (
     handle_task_comment, task_comment_callback, finish_report_callback, clear_report_attachments_callback,
     tasks_back_callback, main_menu_callback, process_calendar_callback,
     add_subtasks_callback, reopen_task_callback,
-    start_tutorial_callback
+    start_tutorial_callback, skip_tutorial_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -204,3 +204,4 @@ reopen_task_handler = bot.callback_query_handler(func=lambda c: c.data.startswit
 
 # Callback для обучения
 start_tutorial_handler = bot.callback_query_handler(func=lambda c: c.data == "start_tutorial")(start_tutorial_callback)
+skip_tutorial_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_tutorial")(skip_tutorial_callback)

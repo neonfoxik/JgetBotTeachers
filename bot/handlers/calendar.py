@@ -5,7 +5,7 @@ from bot import bot, logger
 import calendar as cal
 
 
-def create_calendar(year: int = None, month: int = None) -> tuple[str, InlineKeyboardMarkup]:
+def create_calendar(year: int = None, month: int = None, is_tutorial: bool = False) -> tuple[str, InlineKeyboardMarkup]:
     """
     Создает календарь для выбора даты
     """
@@ -67,10 +67,10 @@ def create_calendar(year: int = None, month: int = None) -> tuple[str, InlineKey
         markup.row(*week_buttons)
 
     # Кнопки управления
-    markup.row(
-        InlineKeyboardButton("Без срока", callback_data="calendar_skip_date"),
-        InlineKeyboardButton("⬅️ Отмена", callback_data="calendar_cancel")
-    )
+    controls = [InlineKeyboardButton("Без срока", callback_data="calendar_skip_date")]
+    if not is_tutorial:
+        controls.append(InlineKeyboardButton("⬅️ Отмена", callback_data="calendar_cancel"))
+    markup.row(*controls)
 
     text = "📅 Выберите дату выполнения задачи:"
 
@@ -390,10 +390,11 @@ def show_calendar(chat_id: str, context: str = "task_creation", message_id: int 
     user_state = get_user_state(chat_id)
     user_state['calendar_context'] = context
     set_user_state(chat_id, user_state)
-
-    text, markup = create_calendar()
     
-    if user_state and user_state.get('is_tutorial'):
+    is_tutorial = user_state and user_state.get('is_tutorial')
+    text, markup = create_calendar(is_tutorial=is_tutorial)
+    
+    if is_tutorial:
         text = "📅 **ШАГ 5: СРОК ВЫПОЛНЕНИЯ**\n\nТы можешь указать дату и время, до которых задачу нужно выполнить. Это удобно для планирования.\n\n" + text
         text += "\n\n_Выбери дату на календаре или нажми 'Пропустить срок'._"
         markup.add(InlineKeyboardButton("Пропустить срок", callback_data="skip_due_date"))
