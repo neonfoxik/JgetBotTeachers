@@ -238,15 +238,24 @@ def task_delete_callback(call: CallbackQuery) -> None:
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
-        text = ""
+
+        text = f"🗑️ УДАЛЕНИЕ ЗАДАЧИ\n\nВы действительно хотите удалить задачу '{task.title}'?\n\n⚠️ Это действие нельзя отменить!"
         markup = InlineKeyboardMarkup()
         markup.add(
             InlineKeyboardButton("✅ Да, удалить", callback_data=f"confirm_delete_{task_id}"),
             InlineKeyboardButton("❌ Отмена", callback_data=f"task_progress_{task_id}")
         )
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
-    except (ValueError, ObjectDoesNotExist):
+
+        # Подтверждаем callback
+        bot.answer_callback_query(call.id)
+
+    except (ValueError, ObjectDoesNotExist) as e:
+        logger.error(f"Error in task_delete_callback: {e}")
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+    except Exception as e:
+        logger.error(f"Unexpected error in task_delete_callback: {e}")
+        bot.answer_callback_query(call.id, "Произошла ошибка", show_alert=True)
 
 
 def confirm_delete_callback(call: CallbackQuery) -> None:
@@ -259,17 +268,28 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
+
         task_title = task.title
         try:
             task.delete()
             text = f"✅ Задача '{task_title}' успешно удалена из базы данных"
             safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+
+            # Подтверждаем callback
+            bot.answer_callback_query(call.id, "Задача удалена", show_alert=False)
+
         except Exception as e:
             logger.error(f"Ошибка при удалении задачи {task_id}: {e}")
             text = f"❌ Ошибка при удалении задачи '{task_title}': {str(e)}"
             safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
-    except (ValueError, ObjectDoesNotExist):
+            bot.answer_callback_query(call.id, "Ошибка при удалении", show_alert=True)
+
+    except (ValueError, ObjectDoesNotExist) as e:
+        logger.error(f"Error in confirm_delete_callback: {e}")
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+    except Exception as e:
+        logger.error(f"Unexpected error in confirm_delete_callback: {e}")
+        bot.answer_callback_query(call.id, "Произошла ошибка", show_alert=True)
 
 
 def task_status_callback(call: CallbackQuery) -> None:
