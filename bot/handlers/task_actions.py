@@ -407,3 +407,38 @@ def task_close_callback(call: CallbackQuery) -> None:
         except Exception as answer_error:
             logger.error(f"Failed to answer callback: {answer_error}")
         logger.info("=== TASK_CLOSE_CALLBACK FAILED ===")
+
+
+def view_task_attachments_callback(call: CallbackQuery) -> None:
+    """Обработчик просмотра вложений, добавленных при создании задачи"""
+    try:
+        task_id = int(call.data.split('_')[3])
+        task = Task.objects.get(id=task_id)
+        chat_id = get_chat_id_from_update(call)
+        
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
+        if not allowed:
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
+            return
+
+        if not task.attachments:
+            bot.answer_callback_query(call.id, "Нет вложений в задаче", show_alert=True)
+            return
+
+        # Отправляем все вложения
+        bot.answer_callback_query(call.id, f"Отправляю вложения ({len(task.attachments)} шт.)...")
+        
+        for attachment in task.attachments:
+            try:
+                if attachment['type'] == 'photo':
+                    bot.send_photo(call.message.chat.id, attachment['file_id'])
+                elif attachment['type'] == 'document':
+                    bot.send_document(call.message.chat.id, attachment['file_id'])
+            except Exception as e:
+                logger.error(f"Ошибка при отправке вложения задачи {task.id}: {e}")
+
+    except (ValueError, ObjectDoesNotExist, IndexError):
+        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+    except Exception as e:
+        logger.error(f"Ошибка в view_task_attachments_callback: {e}")
+        bot.answer_callback_query(call.id, "Произошла ошибка при получении вложений", show_alert=True)

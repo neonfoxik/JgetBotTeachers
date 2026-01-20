@@ -162,6 +162,9 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     if task.due_date:
         text += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}\n"
 
+    if task.attachments:
+        text += f"📎 Вложения: {len(task.attachments)}\n"
+
     if task.status == 'completed' and task.closed_at:
         text += f"✅ Завершена: {task.closed_at.strftime('%d.%m.%Y %H:%M')}\n"
 
@@ -284,6 +287,10 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
     # Кнопка удаления
     if is_creator or is_assignee:
         markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task.id}"))
+
+    # Вложения задачи
+    if task.attachments and len(task.attachments) > 0:
+        markup.add(InlineKeyboardButton("📎 Посмотреть вложения задачи", callback_data=f"view_task_attachments_{task.id}"))
 
     # Вложения отчета
     if task.report_attachments and len(task.report_attachments) > 0:

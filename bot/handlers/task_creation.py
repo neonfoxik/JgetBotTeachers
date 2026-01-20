@@ -16,7 +16,7 @@ from django.utils import timezone
 
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню выбора исполнителя с тремя кнопками: Я сам, Выбрать пользователя, Отмена"""
-    text = "👤 **ШАГ 4: ИСПОЛНИТЕЛЬ**\n\n"
+    text = "👤 **ШАГ 6: ИСПОЛНИТЕЛЬ**\n\n"
     if user_state.get('is_tutorial'):
         text += "Теперь нужно выбрать, КТО будет выполнять задачу. Ты можешь назначить её **себе** или любому другому пользователю бота.\n\n_Нажми 'Я сам', чтобы продолжить обучение._"
     else:
@@ -97,6 +97,7 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
                 creator=creator,
                 assignee=assignee,
                 due_date=due_date_parsed,
+                attachments=user_state.get('attachments', [])
             )
 
             # Создаем подзадачи, если они были добавлены
@@ -245,7 +246,7 @@ def handle_task_creation_messages(message: Message) -> None:
         logger.info(f"Текущее состояние: {state}")
 
         # Проверяем, что состояние относится к созданию задачи
-        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date']:
+        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date', 'waiting_attachments']:
             logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
             return
 
@@ -288,6 +289,33 @@ def handle_task_creation_messages(message: Message) -> None:
             # Показываем календарь вместо текстового ввода
             from bot.handlers.calendar import show_calendar
             show_calendar(str(message.chat.id), "task_creation")
+
+        elif state == 'waiting_attachments':
+            # Обрабатываем вложения
+            attachments = user_state.get('attachments', [])
+            
+            if message.photo:
+                # Получаем самое большое фото
+                photo = message.photo[-1]
+                attachments.append({
+                    'type': 'photo',
+                    'file_id': photo.file_id
+                })
+                bot.send_message(message.chat.id, "✅ Фото добавлено. Вы можете прикрепить еще или нажать 'Готово'.")
+            elif message.document:
+                attachments.append({
+                    'type': 'document',
+                    'file_id': message.document.file_id,
+                    'file_name': message.document.file_name
+                })
+                bot.send_message(message.chat.id, "✅ Файл добавлен. Вы можете прикрепить еще или нажать 'Готово'.")
+            else:
+                bot.send_message(message.chat.id, "❌ Пожалуйста, отправьте фото или файл, либо нажмите 'Готово'.")
+                return
+
+            user_state['attachments'] = attachments
+            set_user_state(chat_id, user_state)
+            show_attachments_menu(chat_id, user_state)
 
     except Exception as e:
         logger.error(f"Ошибка при обработке сообщения создания задачи для {chat_id}: {e}")
@@ -382,13 +410,54 @@ def clear_subtasks_callback(call: CallbackQuery) -> None:
 
 
 def finish_subtasks_callback(call: CallbackQuery) -> None:
-    """Обработчик для завершения ввода подзадач и перехода к сроку выполнения"""
+    """Переход от подзадач к вложениям"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        show_attachments_menu(chat_id, user_state, call)
+
+def show_attachments_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Меню загрузки вложений (фото, файлы)"""
+    user_state['state'] = 'waiting_attachments'
+    set_user_state(chat_id, user_state)
+    
+    attachments = user_state.get('attachments', [])
+    text = "📎 **ШАГ 4: ВЛОЖЕНИЯ (ОПЦИОНАЛЬНО)**\n\n"
+    if user_state.get('is_tutorial'):
+        text += "Ты можешь прикрепить к задаче фото или документы. Просто отправь их боту в этом чате.\n\n"
+    else:
+        text += "Отправьте боту фото или файлы, чтобы прикрепить их к задаче.\n\n"
+        
+    if attachments:
+        text += f"✅ **Уже добавлено: {len(attachments)}**\n\n"
+    
+    text += "_Нажми 'Готово', когда закончишь, или если вложения не нужны._"
+    
+    markup = InlineKeyboardMarkup()
+    if attachments:
+        markup.add(InlineKeyboardButton("🗑️ Очистить список", callback_data="clear_attachments"))
+    markup.add(InlineKeyboardButton("✅ Готово", callback_data="finish_attachments"))
+    markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
+    
+    if call:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
+    else:
+        bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+
+def clear_attachments_callback(call: CallbackQuery) -> None:
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['attachments'] = []
+        show_attachments_menu(chat_id, user_state, call)
+
+def finish_attachments_callback(call: CallbackQuery) -> None:
+    """Переход от вложений к сроку выполнения"""
     chat_id = get_chat_id_from_update(call)
     user_state = get_user_state(chat_id)
     if user_state:
         user_state['state'] = 'waiting_due_date'
         set_user_state(chat_id, user_state)
-        # Показываем календарь вместо текстового ввода
         from bot.handlers.calendar import show_calendar
         show_calendar(chat_id, "task_creation", call.message.message_id)
 

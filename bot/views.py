@@ -8,6 +8,7 @@ from bot.handlers import (
     handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
     add_subtask_callback, cancel_subtask_input_callback, clear_subtasks_callback, finish_subtasks_callback,
+    clear_attachments_callback, finish_attachments_callback,
     skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback,
@@ -120,9 +121,21 @@ tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "ta
 my_created_tasks_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "my_created_tasks")(my_created_tasks_callback)
 create_task_callback_handler = bot.callback_query_handler(func=lambda c: c.data == "create_task")(create_task_callback)
 
-# Обработка сообщений
-handle_task_creation_messages_handler = bot.message_handler(func=lambda message: message.text and not message.text.startswith('/') and not message.text.startswith('@') and not message.text.startswith('http'))(handle_task_creation_messages)
-handle_task_report_handler = bot.message_handler(content_types=['photo', 'document'])(handle_task_report)
+# Обработка сообщений (текст, фото, файлы)
+@bot.message_handler(content_types=['text', 'photo', 'document'])
+def master_message_handler(message: Message):
+    if message.text and message.text.startswith('/'):
+        return # Игнорируем команды, для них есть свои хендлеры
+        
+    from bot.handlers.utils import get_user_state
+    user_state = get_user_state(str(message.chat.id))
+    
+    # Если пользователь в процессе создания/редактирования - отправляем туда
+    if user_state and (user_state.get('state') or 'editing_task_id' in user_state or 'adding_subtasks_task_id' in user_state):
+        handle_task_creation_messages(message)
+    else:
+        # Иначе пробуем обработать как отчет по задаче
+        handle_task_report(message)
 
 # Callback для создания задач
 skip_description_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
@@ -141,6 +154,8 @@ select_user_handler = bot.callback_query_handler(func=lambda c: c.data.startswit
 back_to_assignee_selection_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_selection")(back_to_assignee_selection_callback)
 back_to_assignee_type_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_type")(back_to_assignee_type_callback)
 cancel_task_creation_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
+clear_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "clear_attachments")(clear_attachments_callback)
+finish_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "finish_attachments")(finish_attachments_callback)
 
 # Callback для календаря
 calendar_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("calendar_"))(process_calendar_callback)
@@ -166,8 +181,9 @@ edit_due_date_handler = bot.callback_query_handler(func=lambda c: c.data.startsw
 assignee_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("assignee_page_"))(assignee_page_callback)
 change_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("change_assignee_"))(change_assignee_callback)
 
-# Callback для отчетов
+# Callback для вложений
 view_report_attachments_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("view_report_attachments_"))(view_report_attachments_callback)
+view_task_attachments_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("view_task_attachments_"))(view_task_attachments_callback)
 
 # Callback для главного меню
 tasks_back_handler = bot.callback_query_handler(func=lambda c: c.data == "tasks_back")(tasks_back_callback)

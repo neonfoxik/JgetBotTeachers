@@ -12,12 +12,13 @@ from .task_actions import (
     task_view_callback, task_progress_callback, task_complete_callback,
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
     task_delete_callback, confirm_delete_callback, task_status_callback,
-    task_close_callback
+    task_close_callback, view_task_attachments_callback
 )
 from .task_creation import (
     handle_task_creation_messages, skip_description_callback, skip_due_date_callback,
     assign_to_creator_callback, assign_to_me_callback, choose_user_from_list_callback,
     add_subtask_callback, cancel_subtask_input_callback, clear_subtasks_callback, finish_subtasks_callback,
+    clear_attachments_callback, finish_attachments_callback,
     skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback
