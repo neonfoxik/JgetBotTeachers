@@ -317,6 +317,15 @@ def handle_task_creation_messages(message: Message) -> None:
                     'type': 'photo',
                     'file_id': photo.file_id
                 })
+                
+                # Если есть подпись, можно добавить её к описанию или вывести уведомление
+                if message.caption:
+                    current_desc = user_state.get('description', '')
+                    if current_desc:
+                        user_state['description'] = f"{current_desc}\n\n[Из подписи к фото]: {message.caption}"
+                    else:
+                        user_state['description'] = message.caption
+                
                 bot.send_message(message.chat.id, "✅ Фото добавлено. Вы можете прикрепить еще или нажать 'Готово'.")
             elif message.document:
                 attachments.append({
@@ -324,6 +333,14 @@ def handle_task_creation_messages(message: Message) -> None:
                     'file_id': message.document.file_id,
                     'file_name': message.document.file_name
                 })
+                
+                if message.caption:
+                    current_desc = user_state.get('description', '')
+                    if current_desc:
+                        user_state['description'] = f"{current_desc}\n\n[Из подписи к файлу]: {message.caption}"
+                    else:
+                        user_state['description'] = message.caption
+                        
                 bot.send_message(message.chat.id, "✅ Файл добавлен. Вы можете прикрепить еще или нажать 'Готово'.")
             else:
                 bot.send_message(message.chat.id, "❌ Пожалуйста, отправьте фото или файл, либо нажмите 'Готово'.")

@@ -32,10 +32,21 @@ def handle_task_report(message: Message) -> None:
     try:
         active_task = Task.objects.get(id=task_id)
 
-        # Обрабатываем текстовый отчет
-        report_text = ""
+        # Обрабатываем текстовый отчет или подпись к фото
+        new_text = ""
         if message.text and not message.text.startswith('/'):
-            report_text = message.text.strip()
+            new_text = message.text.strip()
+        elif message.caption:
+            new_text = message.caption.strip()
+
+        # Получаем накопленный текст отчета из состояния
+        report_text = user_state.get('report_text', '')
+        if new_text:
+            if report_text:
+                report_text += f"\n{new_text}"
+            else:
+                report_text = new_text
+            user_state['report_text'] = report_text
 
         # Обрабатываем вложения
         attachments = user_state.get('report_attachments', [])
@@ -57,7 +68,11 @@ def handle_task_report(message: Message) -> None:
             markup.add(InlineKeyboardButton("✅ Завершить и отправить", callback_data="finish_report"))
             markup.add(InlineKeyboardButton("🗑️ Сбросить вложения", callback_data="clear_report_attachments"))
             
-            bot.send_message(chat_id, f"✅ Вложение добавлено (всего: {len(attachments)}). Вы можете отправить еще или завершить:", reply_markup=markup)
+            status_msg = f"✅ Вложение добавлено (всего: {len(attachments)})."
+            if report_text:
+                status_msg += f"\n📝 Текст отчета: {report_text[:50]}..."
+            
+            bot.send_message(chat_id, f"{status_msg}\nВы можете отправить еще или завершить:", reply_markup=markup)
             return
 
         # Проверяем, что есть либо достаточный текст, либо вложения
@@ -95,9 +110,12 @@ def finish_report_callback(call: CallbackQuery) -> None:
     
     try:
         task = Task.objects.get(id=task_id)
-        if not task.report_text:
-            task.report_text = f"Отчет с вложениями ({len(attachments)} шт.)"
+        report_text = user_state.get('report_text')
         
+        if not report_text:
+            report_text = f"Отчет с вложениями ({len(attachments)} шт.)"
+        
+        task.report_text = report_text
         task.report_attachments = attachments
         task.status = 'pending_review'
         task.save()
@@ -211,6 +229,7 @@ def clear_report_attachments_callback(call: CallbackQuery) -> None:
     user_state = get_user_state(chat_id)
     if user_state and user_state.get('state') == 'waiting_report':
         user_state['report_attachments'] = []
+        user_state['report_text'] = ''
         set_user_state(chat_id, user_state)
-        bot.answer_callback_query(call.id, "Вложения очищены")
-        bot.edit_message_text("❌ Вложения очищены. Отправьте новые или напишите текст отчета:", chat_id, call.message.message_id)
+        bot.answer_callback_query(call.id, "Отчет очищен")
+        bot.edit_message_text("❌ Данные отчета очищены. Отправьте новые или напишите текст отчета:", chat_id, call.message.message_id)
