@@ -126,6 +126,13 @@ def initiate_task_close(chat_id: str, task: Task) -> None:
             bot.send_message(chat_id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'")
             return
 
+        # Проверяем, все ли подзадачи выполнены
+        from bot.handlers.task_actions import check_all_subtasks_completed
+        all_completed, error_msg = check_all_subtasks_completed(task)
+        if not all_completed:
+            bot.send_message(chat_id, error_msg)
+            return
+
         if task.creator.telegram_id == task.assignee.telegram_id:
             # Создатель и исполнитель - один человек, закрываем задачу сразу
             task.status = 'completed'

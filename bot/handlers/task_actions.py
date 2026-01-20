@@ -2,6 +2,25 @@ from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
     check_permissions, show_task_progress
 )
+
+
+def check_all_subtasks_completed(task: Task) -> tuple[bool, str]:
+    """
+    Проверяет, все ли подзадачи выполнены
+    Возвращает (все_выполнены, сообщение_ошибки)
+    """
+    subtasks = task.subtasks.all()
+    if not subtasks:
+        return True, ""  # Если подзадач нет, то проверка пройдена
+
+    completed_count = subtasks.filter(is_completed=True).count()
+    total_count = subtasks.count()
+
+    if completed_count == total_count:
+        return True, ""
+    else:
+        incomplete_count = total_count - completed_count
+        return False, f"❌ Невозможно закрыть задачу! {incomplete_count} подзадач из {total_count} не выполнены."
 from bot.handlers.tasks import initiate_task_close
 from bot import bot, logger
 from bot.models import User, Task, Subtask
@@ -66,6 +85,12 @@ def task_complete_callback(call: CallbackQuery) -> None:
 
         if task.status != 'active':
             bot.answer_callback_query(call.id, f"Задача уже имеет статус '{task.get_status_display()}'", show_alert=True)
+            return
+
+        # Проверяем, все ли подзадачи выполнены
+        all_completed, error_msg = check_all_subtasks_completed(task)
+        if not all_completed:
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
         user = get_or_create_user(chat_id)
@@ -320,6 +345,13 @@ def task_close_callback(call: CallbackQuery) -> None:
         if task.status != 'active':
             logger.warning(f"Task status is {task.status}, not active")
             bot.answer_callback_query(call.id, f"❌ Невозможно отправить задачу в статусе '{task.get_status_display()}'", show_alert=True)
+            return
+
+        # Проверяем, все ли подзадачи выполнены
+        all_completed, error_msg = check_all_subtasks_completed(task)
+        if not all_completed:
+            logger.warning(f"Task {task.id} cannot be closed: not all subtasks completed")
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
         # Отправляем задачу на проверку
