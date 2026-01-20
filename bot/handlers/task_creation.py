@@ -75,7 +75,7 @@ def show_user_selection_list(chat_id: str, user_state: dict, call: CallbackQuery
     markup = get_user_selection_markup(users)
 
     if call:
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
     else:
         bot.send_message(chat_id, text, reply_markup=markup)
 
@@ -327,10 +327,10 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
         success, msg, markup = create_task_from_state(chat_id, user_state)
         
         # Очищаем состояние только если это не туториал
-        if user_state.get('state') != 'tutorial_waiting_for_creation':
+        if user_state.get('state') != 'tutorial_waiting_for_creation' and not user_state.get('is_tutorial'):
             clear_user_state(chat_id)
             
-        safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id)
+        safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
 
 
 
@@ -358,7 +358,7 @@ def add_subtask_callback(call: CallbackQuery) -> None:
         text = "📝 Введите название подзадачи:"
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_subtask_input"))
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
 
 
 def cancel_subtask_input_callback(call: CallbackQuery) -> None:
@@ -426,7 +426,7 @@ def show_user_selection_page(call: CallbackQuery, page: int, users_per_page: int
         total_users = len(users)
     total_pages = (total_users + users_per_page - 1) // users_per_page if total_users > 0 else 1
     text = f"👤 Выберите исполнителя (страница {page + 1} из {total_pages}):"
-    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
+    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
 
 
 def select_user_callback(call: CallbackQuery) -> None:
@@ -479,10 +479,10 @@ def select_user_callback(call: CallbackQuery) -> None:
             success, msg, markup = create_task_from_state(chat_id, user_state)
             
             # Очищаем состояние только если это не туториал
-            if user_state.get('state') != 'tutorial_waiting_for_creation':
+            if user_state.get('state') != 'tutorial_waiting_for_creation' and not user_state.get('is_tutorial'):
                 clear_user_state(chat_id)
                 
-            safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id)
+            safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
 
     except Exception as e:
         logger.error(f"Ошибка при выборе пользователя: {e}")
@@ -507,4 +507,4 @@ def back_to_assignee_type_callback(call: CallbackQuery) -> None:
 def cancel_task_creation_callback(call: CallbackQuery) -> None:
     clear_user_state(str(call.message.chat.id))
     text = "❌ Создание задачи отменено"
-    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id, parse_mode='Markdown')

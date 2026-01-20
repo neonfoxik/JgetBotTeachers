@@ -20,7 +20,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 
 
-def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, message_id=None) -> None:
+def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, message_id=None, parse_mode=None) -> None:
     """Безопасно редактирует сообщение или отправляет новое при ошибке"""
     try:
         if message_id:
@@ -28,14 +28,15 @@ def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, messag
                 chat_id=chat_id,
                 text=text,
                 reply_markup=reply_markup,
-                message_id=message_id
+                message_id=message_id,
+                parse_mode=parse_mode
             )
         else:
-            bot.send_message(chat_id, text, reply_markup=reply_markup)
+            bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
     except ApiTelegramException as e:
         logger.warning(f"Failed to edit message {message_id} in chat {chat_id}: {e}")
         try:
-            bot.send_message(chat_id, text, reply_markup=reply_markup)
+            bot.send_message(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
         except Exception as send_e:
             logger.error(f"Failed to send message to chat {chat_id}: {send_e}")
 
