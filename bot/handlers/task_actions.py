@@ -125,7 +125,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
         if u_state and u_state.get('state') == 'tutorial_waiting_for_completion':
             if task.id == u_state.get('tutorial_task_id'):
                 from bot.handlers.tutorial import finish_tutorial
-                finish_tutorial(chat_id)
+                finish_tutorial(chat_id, call.message.message_id)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
@@ -390,7 +390,7 @@ def task_close_callback(call: CallbackQuery) -> None:
 
         # Отправляем задачу на проверку
         logger.info("Calling initiate_task_close")
-        initiate_task_close(chat_id, task)
+        initiate_task_close(chat_id, task, call.message.message_id)
 
         # Отвечаем на callback
         logger.info("Answering callback query with success")

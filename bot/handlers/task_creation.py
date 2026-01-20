@@ -84,7 +84,7 @@ def show_user_selection_list(chat_id: str, user_state: dict, call: CallbackQuery
         bot.send_message(chat_id, text, reply_markup=markup)
 
 
-def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, InlineKeyboardMarkup]:
+def create_task_from_state(chat_id: str, user_state: dict, message_id: int = None) -> tuple[bool, str, InlineKeyboardMarkup]:
     try:
         creator = get_or_create_user(chat_id)
         assignee_id = user_state.get('assignee_id')
@@ -132,7 +132,7 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
 
             if user_state.get('is_tutorial') or user_state.get('state') == 'tutorial_waiting_for_creation':
                 from bot.handlers.tutorial import tutorial_task_created
-                tutorial_task_created(chat_id, task.id)
+                tutorial_task_created(chat_id, task.id, message_id)
                 return True, success_msg, None # Tutorial handles its own message
 
             return True, success_msg, TASK_MANAGEMENT_MARKUP
@@ -368,7 +368,7 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
         user_state['assignee_id'] = None  # None означает назначить себе
         set_user_state(chat_id, user_state)
 
-        success, msg, markup = create_task_from_state(chat_id, user_state)
+        success, msg, markup = create_task_from_state(chat_id, user_state, call.message.message_id)
         
         # Очищаем состояние только при успехе и если это не туториал
         if success:
@@ -563,7 +563,7 @@ def select_user_callback(call: CallbackQuery) -> None:
             user_state['assignee_id'] = assignee_telegram_id
             set_user_state(chat_id, user_state)
 
-            success, msg, markup = create_task_from_state(chat_id, user_state)
+            success, msg, markup = create_task_from_state(chat_id, user_state, call.message.message_id)
             
             # Очищаем состояние только при успехе и если это не туториал
             if success:

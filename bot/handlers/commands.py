@@ -97,7 +97,7 @@ def tasks_command_logic(update) -> None:
 
     # Если это callback (есть message в update), редактируем сообщение
     if hasattr(update, 'message') and hasattr(update.message, 'message_id'):
-        bot.edit_message_text(
+        safe_edit_or_send_message(
             chat_id=chat_id,
             text=text,
             reply_markup=markup,

@@ -95,7 +95,7 @@ def my_created_tasks_command_logic(update) -> None:
 
     # Если это callback (есть message в update), редактируем сообщение
     if hasattr(update, 'message') and hasattr(update.message, 'message_id'):
-        bot.edit_message_text(
+        safe_edit_or_send_message(
             chat_id=chat_id,
             text=text,
             reply_markup=markup,
@@ -103,7 +103,7 @@ def my_created_tasks_command_logic(update) -> None:
         )
     else:
         # Если это команда, отправляем новое сообщение
-        bot.send_message(chat_id, text, reply_markup=markup)
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup)
 def create_task_command_logic(update) -> None:
     chat_id = get_chat_id_from_update(update)
     logger.info(f"Начало создания задачи для пользователя {chat_id}")
@@ -120,7 +120,10 @@ def create_task_command_logic(update) -> None:
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="main_menu"))
     
-    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+    message_id = update.message.message_id if hasattr(update, 'message') else None
+    safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id, parse_mode='Markdown')
+
+    new_state = {'state': 'waiting_task_title'}
     
     new_state = {'state': 'waiting_task_title'}
     if is_tutorial:
@@ -133,18 +136,18 @@ def create_task_command_logic(update) -> None:
 # Обработчик task_progress перенесен в commands.py
 # Обработчик debug перенесен в commands.py
 
-def initiate_task_close(chat_id: str, task: Task) -> None:
+def initiate_task_close(chat_id: str, task: Task, message_id: int = None) -> None:
     """Инициирует процесс закрытия задачи"""
     try:
         if task.status not in ['active', 'pending_review']:
-            bot.send_message(chat_id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'")
+            safe_edit_or_send_message(chat_id, f"❌ Невозможно закрыть задачу в статусе '{task.get_status_display()}'", message_id=message_id)
             return
 
         # Проверяем, все ли подзадачи выполнены
         from bot.handlers.task_actions import check_all_subtasks_completed
         all_completed, error_msg = check_all_subtasks_completed(task)
         if not all_completed:
-            bot.send_message(chat_id, error_msg)
+            safe_edit_or_send_message(chat_id, error_msg, message_id=message_id)
             return
 
         if task.creator.telegram_id == task.assignee.telegram_id:
@@ -160,119 +163,25 @@ def initiate_task_close(chat_id: str, task: Task) -> None:
                 print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
 
             text = f"✅ ЗАДАЧА ЗАКРЫТА\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!"
-            bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
+            safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=message_id)
         else:
             # Отправляем запрос на отчет
-            text = f"""📄 ОТПРАВКА ОТЧЕТА О ВЫПОЛНЕНИИ
-{format_task_info(task)}
-📝 Отправьте текст отчета о выполнении задачи.
-Отчет должен содержать минимум 10 символов.
-💡 Вы можете прикрепить фото или файлы к сообщению с отчетом.
-Отправьте текст отчета с вложениями (если нужно) в одном сообщении."""
+            text = f"📄 **ОТПРАВКА ОТЧЕТА ПО ЗАДАЧЕ**\n\n{format_task_info(task)}\n\n"
+            text += "Опишите что было сделано (минимум 10 символов) или прикрепите фото/файлы:"
 
             markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="tasks_back"))
+            markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data=f"task_progress_{task.id}"))
 
-            bot.send_message(chat_id, text, reply_markup=markup)
+            # Пытаемся редактировать, если есть message_id, иначе отправляем новое
+            safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id, parse_mode='Markdown')
 
             set_user_state(chat_id, {
-                'state': 'waiting_task_report',
-                'task_id': task.id
+                'state': 'waiting_report',
+                'report_task_id': task.id
             })
     except Exception as e:
-        logger.error(f"Error in initiate_task_close: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        # Отправляем сообщение об ошибке пользователю
+        logger.error(f"Error in initiate_task_close: {e}", exc_info=True)
         try:
             bot.send_message(chat_id, "❌ Произошла ошибка при отправке задачи на проверку")
-        except Exception as msg_error:
-            logger.error(f"Failed to send error message: {msg_error}")
-def handle_task_report(message: Message) -> None:
-    user_state = get_user_state(str(message.chat.id))
-    if not user_state or user_state.get('state') != 'waiting_task_report':
-        return
-    task_id = user_state['task_id']
-    try:
-        task = Task.objects.get(id=task_id)
-        if str(message.chat.id) != task.assignee.telegram_id:
-            bot.send_message(message.chat.id, "❌ У вас нет прав отправлять отчет по этой задаче")
-            return
-        if task.status != 'active':
-            bot.send_message(message.chat.id, f"❌ Невозможно отправить отчет. Задача находится в статусе '{task.get_status_display()}'")
-            return
-        user = get_or_create_user(str(message.chat.id))
-        attachments = []
-        if message.photo:
-            file_id = message.photo[-1].file_id
-            attachments.append({
-                'file_id': file_id,
-                'type': 'photo',
-                'file_name': None
-            })
-        elif message.document:
-            file_id = message.document.file_id
-            file_name = getattr(message.document, 'file_name', None)
-            attachments.append({
-                'file_id': file_id,
-                'type': 'document',
-                'file_name': file_name
-            })
-        report_text = message.text.strip() if message.text else ""
-        if len(report_text) < 10 and not attachments:
-            bot.send_message(message.chat.id, "❌ Отчет должен содержать минимум 10 символов текста ИЛИ вложения (фото/файлы)")
-            return
-        elif len(report_text) < 10 and attachments:
-            report_text = f"Отчет с вложениями ({len(attachments)} файлов)"
-        task.report_text = report_text
-        task.report_attachments = attachments
-        task.status = 'pending_review'
-        task.save()
-        attachments_info = ""
-        if task.report_attachments:
-            attachments_info = f"\n📎 Вложений в отчете: {len(task.report_attachments)}"
-        creator_text = f"""📄 ПОЛУЧЕН ОТЧЕТ О ВЫПОЛНЕНИИ
-{format_task_info(task)}
-👤 Исполнитель: {task.assignee.user_name}
-📝 Отчет: {task.report_text}{attachments_info}
-"""
-        markup = get_task_confirmation_markup(task.id)
-        try:
-            bot.send_message(task.creator.telegram_id, creator_text, reply_markup=markup)
-        except Exception as e:
-            bot.send_message(message.chat.id, f"⚠️ Не удалось уведомить создателя: {e}")
-        bot.send_message(message.chat.id, "✅ Отчет успешно отправлен создателю для проверки", reply_markup=TASK_MANAGEMENT_MARKUP)
-    except Task.DoesNotExist:
-        bot.send_message(message.chat.id, "❌ Задача не найдена")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"❌ Ошибка при отправке отчета: {e}")
-    finally:
-        clear_user_state(str(message.chat.id))
-# Обработчик tasks_back перенесен в main.py
-    tasks_command(call)
-# Обработчик back_to_assignee_type перенесен в task_creation.py
-    back_to_assignee_selection_callback(call)
-# Обработчик view_report_attachments перенесен в reports.py
-    try:
-        task_id = int(call.data.split('_')[3])
-        task = Task.objects.get(id=task_id)
-        chat_id = get_chat_id_from_update(call)
-        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
-        if not allowed:
-            bot.answer_callback_query(call.id, error_msg, show_alert=True)
-            return
-        if not task.report_attachments:
-            bot.answer_callback_query(call.id, "У этой задачи нет вложений в отчете", show_alert=True)
-            return
-        text = ""
-        for i, attachment in enumerate(task.report_attachments, 1):
-            attachment_type = attachment.get('type', 'unknown')
-            file_name = attachment.get('file_name', f'Вложение {i}')
-            text += f"\n{i}. {attachment_type.upper()}: {file_name}"
-        text += "\n\n💡 Вложения доступны в оригинальном сообщении с отчетом."
-        bot.edit_message_text(chat_id=call.message.chat.id, text=text, message_id=call.message.message_id)
-    except (ValueError, ObjectDoesNotExist):
-        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
-# Обработчик main_menu перенесен в main.py
-    text = "🏠 Главное меню"
-    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+        except:
+            pass

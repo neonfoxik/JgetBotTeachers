@@ -13,20 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 
-def initiate_task_close(chat_id: str, task: Task) -> None:
-    """Инициирует процесс закрытия задачи с отправкой отчета"""
-    user_state = get_user_state(chat_id) or {}
-    user_state['state'] = 'waiting_report'
-    user_state['report_task_id'] = task.id
-    set_user_state(chat_id, user_state)
-
-    text = f"📄 **ОТПРАВКА ОТЧЕТА ПО ЗАДАЧЕ**\n\n{format_task_info(task)}\n\n"
-    text += "Опишите что было сделано (минимум 10 символов) или прикрепите фото/файлы:"
-
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data=f"task_progress_{task.id}"))
-
-    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+# initiate_task_close перенесена в tasks.py и унифицирована
 
 
 def handle_task_report(message: Message) -> None:

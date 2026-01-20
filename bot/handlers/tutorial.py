@@ -30,7 +30,7 @@ def start_tutorial(chat_id: str, message_id: int = None) -> None:
     else:
         bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
 
-def tutorial_task_created(chat_id: str, task_id: int) -> None:
+def tutorial_task_created(chat_id: str, task_id: int, message_id: int = None) -> None:
     text = f"""✨ **Ура! Твоя первая задача создана.**
 
 Ты только что прошёл этапы ввода названия, описания и выбора исполнителя. 
@@ -49,9 +49,10 @@ def tutorial_task_created(chat_id: str, task_id: int) -> None:
         'is_tutorial': True
     })
     
-    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+    safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=message_id, parse_mode='Markdown')
 
-def finish_tutorial(chat_id: str) -> None:
+
+def finish_tutorial(chat_id: str, message_id: int = None) -> None:
     text = """🎉 **Поздравляю! Ты — мастер задач!**
 
 Теперь ты знаешь всё необходимое:
@@ -70,7 +71,7 @@ def finish_tutorial(chat_id: str) -> None:
         logger.error(f"Error marking tutorial as finished: {e}")
 
     clear_user_state(chat_id)
-    bot.send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, parse_mode='Markdown')
+    safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=message_id, parse_mode='Markdown')
 
 def start_tutorial_callback(call: CallbackQuery) -> None:
     chat_id = str(call.message.chat.id)
