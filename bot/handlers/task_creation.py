@@ -128,9 +128,9 @@ def handle_task_creation_messages(message: Message) -> None:
         state = user_state.get('state')
         logger.info(f"Текущее состояние: {state}")
         
-        # Проверяем, что состояние относится к созданию задачи
-        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date']:
-            logger.info(f"Состояние {state} не относится к созданию задачи, пропускаем")
+        # Проверяем, что состояние относится к созданию задачи или добавлению подзадач
+        if state not in ['waiting_task_title', 'waiting_task_description', 'waiting_subtasks', 'waiting_subtask_input', 'waiting_due_date'] and 'adding_subtasks_task_id' not in user_state:
+            logger.info(f"Состояние {state} не относится к созданию задачи или добавлению подзадач, пропускаем")
             return
 
         if state == 'waiting_task_title':
@@ -166,6 +166,63 @@ def handle_task_creation_messages(message: Message) -> None:
             # Показываем календарь вместо текстового ввода
             from bot.handlers.calendar import show_calendar
             show_calendar(str(message.chat.id), "task_creation")
+
+        # Обработка добавления подзадач к существующей задаче
+        elif 'adding_subtasks_task_id' in user_state:
+            task_id = user_state['adding_subtasks_task_id']
+            try:
+                task = Task.objects.get(id=task_id)
+                chat_id = str(message.chat.id)
+                allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
+                if not allowed:
+                    bot.send_message(message.chat.id, error_msg)
+                    clear_user_state(chat_id)
+                    return
+
+                if task.status == 'completed':
+                    bot.send_message(message.chat.id, "❌ Нельзя добавлять подзадачи к завершенной задаче")
+                    clear_user_state(chat_id)
+                    return
+
+                # Разбираем подзадачи по строкам
+                subtasks_text = message.text.strip()
+                if not subtasks_text:
+                    bot.send_message(message.chat.id, "❌ Список подзадач не может быть пустым")
+                    return
+
+                subtasks = [line.strip() for line in subtasks_text.split('\n') if line.strip()]
+
+                if not subtasks:
+                    bot.send_message(message.chat.id, "❌ Не найдено ни одной подзадачи")
+                    return
+
+                # Создаем подзадачи
+                from bot.models import Subtask
+                created_count = 0
+                for subtask_title in subtasks:
+                    if len(subtask_title) > 3:  # Минимум 3 символа для названия
+                        Subtask.objects.create(
+                            task=task,
+                            title=subtask_title
+                        )
+                        created_count += 1
+
+                # Очищаем состояние
+                clear_user_state(chat_id)
+
+                # Обновляем прогресс задачи
+                task.update_progress()
+
+                text = f"✅ Добавлено {created_count} подзадач к задаче '{task.title}'"
+                bot.send_message(message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
+
+            except Task.DoesNotExist:
+                bot.send_message(message.chat.id, "❌ Задача не найдена")
+                clear_user_state(chat_id)
+            except Exception as e:
+                logger.error(f"Ошибка при добавлении подзадач: {e}")
+                bot.send_message(message.chat.id, "❌ Произошла ошибка при добавлении подзадач")
+                clear_user_state(chat_id)
 
     except Exception as e:
         logger.error(f"Ошибка при обработке сообщения создания задачи для {chat_id}: {e}")

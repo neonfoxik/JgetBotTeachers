@@ -18,7 +18,8 @@ from bot.handlers import (
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
     change_assignee_callback, task_close_callback,
     handle_task_report, view_report_attachments_callback,
-    tasks_back_callback, main_menu_callback, process_calendar_callback
+    tasks_back_callback, main_menu_callback, process_calendar_callback,
+    add_subtasks_callback, reopen_task_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -171,3 +172,6 @@ view_report_attachments_handler = bot.callback_query_handler(func=lambda c: c.da
 tasks_back_handler = bot.callback_query_handler(func=lambda c: c.data == "tasks_back")(tasks_back_callback)
 main_menu_handler = bot.callback_query_handler(func=lambda c: c.data == "main_menu")(main_menu_callback)
 
+# Callback для добавления подзадач и изменения статуса задач
+add_subtasks_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("add_subtasks_"))(add_subtasks_callback)
+reopen_task_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("reopen_task_"))(reopen_task_callback)

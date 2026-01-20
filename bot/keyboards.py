@@ -15,8 +15,9 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
                           is_creator: bool = False, is_assignee: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
 
-    # Для завершенных задач показываем только кнопки удаления и возврата в главное меню
+    # Для завершенных задач показываем кнопки удаления, редактирования и возврата в главное меню
     if task_status == 'completed':
+        markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
         markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
         return markup
@@ -37,6 +38,9 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
             markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task_id}"))
         else:
             markup.add(btn1)
+            # Для незавершенных задач добавляем возможность добавления подзадач
+            if task_status == 'active':
+                markup.add(InlineKeyboardButton("📋 Добавить подзадачи", callback_data=f"add_subtasks_{task_id}"))
             markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
     else:
         markup.add(btn1)

@@ -17,6 +17,11 @@ from django.utils import timezone
 def show_task_edit_menu(call: CallbackQuery, task: Task) -> None:
     text = f"✏️ РЕДАКТИРОВАНИЕ ЗАДАЧИ\n\n{format_task_info(task)}\n\nВыберите что редактировать:"
     markup = InlineKeyboardMarkup()
+
+    # Для завершенных задач добавляем кнопку "Сделать незавершенной"
+    if task.status == 'completed':
+        markup.add(InlineKeyboardButton("🔄 Сделать незавершенной", callback_data=f"reopen_task_{task.id}"))
+
     markup.add(InlineKeyboardButton("📝 Название", callback_data=f"edit_title_{task.id}"))
     markup.add(InlineKeyboardButton("📖 Описание", callback_data=f"edit_description_{task.id}"))
     markup.add(InlineKeyboardButton("👤 Исполнитель", callback_data=f"edit_assignee_{task.id}"))
@@ -196,6 +201,69 @@ def edit_due_date_callback(call: CallbackQuery) -> None:
         # Показываем календарь вместо текстового ввода
         from bot.handlers.calendar import show_calendar
         show_calendar(chat_id, f"task_editing_{task_id}", call.message.message_id)
+
+    except (ValueError, ObjectDoesNotExist):
+        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+
+
+def add_subtasks_callback(call: CallbackQuery) -> None:
+    try:
+        task_id = int(call.data.split('_')[2])
+        task = Task.objects.get(id=task_id)
+        chat_id = get_chat_id_from_update(call)
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
+        if not allowed:
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
+            return
+
+        if task.status == 'completed':
+            bot.answer_callback_query(call.id, "Нельзя добавлять подзадачи к завершенной задаче", show_alert=True)
+            return
+
+        text = f"📋 ДОБАВЛЕНИЕ ПОДЗАДАЧ\n\nЗадача: {task.title}\n\nВведите названия подзадач, каждую с новой строки:"
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data=f"task_progress_{task_id}"))
+        safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
+
+        # Устанавливаем состояние пользователя для ожидания подзадач
+        user_state = {'adding_subtasks_task_id': task_id}
+        set_user_state(chat_id, user_state)
+
+    except (ValueError, ObjectDoesNotExist):
+        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+
+
+def reopen_task_callback(call: CallbackQuery) -> None:
+    try:
+        task_id = int(call.data.split('_')[2])
+        task = Task.objects.get(id=task_id)
+        chat_id = get_chat_id_from_update(call)
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
+        if not allowed:
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
+            return
+
+        if task.status != 'completed':
+            bot.answer_callback_query(call.id, "Задача уже незавершена", show_alert=True)
+            return
+
+        # Меняем статус задачи на active и очищаем дату закрытия
+        task.status = 'active'
+        task.closed_at = None
+        task.save()
+
+        text = f"✅ Задача '{task.title}' снова стала активной и доступной для редактирования"
+        safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+
+        # Уведомляем исполнителя, если он не создатель
+        if task.creator.telegram_id != task.assignee.telegram_id:
+            try:
+                bot.send_message(
+                    task.assignee.telegram_id,
+                    f"🔄 ЗАДАЧА СНОВА АКТИВНА\n\n{format_task_info(task)}\n\nЗадача была reopened создателем."
+                )
+            except Exception as e:
+                logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
