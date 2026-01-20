@@ -109,11 +109,14 @@ def create_time_selector() -> tuple[str, InlineKeyboardMarkup]:
     return text, markup
 
 
-def process_calendar_callback(call, context: str = "task_creation") -> None:
+def process_calendar_callback(call) -> None:
     """
     Обрабатывает callback'и календаря
-    context может быть "task_creation" или "task_editing_{task_id}"
     """
+    from bot.handlers.utils import get_user_state
+    chat_id = str(call.message.chat.id)
+    user_state = get_user_state(chat_id)
+    context = user_state.get('calendar_context', 'task_creation')
     data = call.data
     logger.info(f"Обработка callback календаря: {data}, context: {context}")
 
@@ -383,6 +386,11 @@ def show_calendar(chat_id: str, context: str = "task_creation", message_id: int 
     """
     Показывает календарь пользователю
     """
+    from bot.handlers.utils import get_user_state, set_user_state
+    user_state = get_user_state(chat_id)
+    user_state['calendar_context'] = context
+    set_user_state(chat_id, user_state)
+
     text, markup = create_calendar()
 
     if message_id:

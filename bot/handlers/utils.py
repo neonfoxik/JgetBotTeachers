@@ -266,9 +266,6 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
         return markup
 
-    # Кнопка прогресса (для обновления вида)
-    btn_progress = InlineKeyboardButton("🔄 Обновить", callback_data=f"task_progress_{task.id}")
-
     if is_assignee and task.status in ['active', 'pending_review']:
         if task.status == 'active':
             if is_creator:
@@ -277,16 +274,13 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
                 btn_action = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task.id}")
         else:
             btn_action = InlineKeyboardButton("⏳ Ожидает проверки", callback_data=f"task_status_{task.id}")
-        markup.add(btn_progress, btn_action)
+        markup.add(btn_action)
     elif is_creator:
         if task.status == 'pending_review':
             markup.add(InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task.id}"))
             markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task.id}"))
         else:
-            markup.add(btn_progress)
             markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task.id}"))
-    else:
-        markup.add(btn_progress)
 
     # Кнопка удаления доступна для всех задач, где пользователь имеет права
     if is_creator or is_assignee:

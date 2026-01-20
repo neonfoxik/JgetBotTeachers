@@ -105,6 +105,8 @@ def edit_assignee_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
+        from bot.handlers.utils import set_user_state
+        set_user_state(chat_id, {'editing_task_id': task_id, 'editing_field': 'assignee'})
         show_assignee_selection_page(call, task, 0)
 
     except (ValueError, ObjectDoesNotExist):

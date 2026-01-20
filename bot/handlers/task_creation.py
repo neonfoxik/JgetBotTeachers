@@ -185,6 +185,43 @@ def handle_task_creation_messages(message: Message) -> None:
                 clear_user_state(chat_id)
             return
 
+        # Проверяем на редактирование задачи
+        if 'editing_task_id' in user_state:
+            task_id = user_state['editing_task_id']
+            field = user_state.get('editing_field')
+            try:
+                task = Task.objects.get(id=task_id)
+                if field == 'title':
+                    if len(message.text.strip()) < 3:
+                        bot.send_message(message.chat.id, "❌ Название задачи должно содержать минимум 3 символа")
+                        return
+                    task.title = message.text.strip()
+                    task.save()
+                    bot.send_message(message.chat.id, f"✅ Название задачи #{task_id} изменено")
+                elif field == 'description':
+                    task.description = message.text.strip()
+                    task.save()
+                    bot.send_message(message.chat.id, f"✅ Описание задачи #{task_id} изменено")
+                
+                # Очищаем состояние
+                clear_user_state(chat_id)
+                
+                # Показываем обновленную информацию о задаче
+                from bot.handlers.utils import show_task_progress
+                is_creator = str(task.creator.telegram_id) == str(chat_id)
+                is_assignee = str(task.assignee.telegram_id) == str(chat_id)
+                show_task_progress(chat_id, task, is_creator, is_assignee)
+                return
+            except Task.DoesNotExist:
+                bot.send_message(message.chat.id, "❌ Задача не найдена")
+                clear_user_state(chat_id)
+                return
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании задачи: {e}")
+                bot.send_message(message.chat.id, "❌ Произошла ошибка при сохранении изменений")
+                clear_user_state(chat_id)
+                return
+
         # Проверяем на создание задачи
         state = user_state.get('state')
         if not state:
@@ -375,6 +412,34 @@ def select_user_callback(call: CallbackQuery) -> None:
         user_state = get_user_state(chat_id)
 
         if user_state:
+            if user_state.get('editing_field') == 'assignee' and 'editing_task_id' in user_state:
+                task_id = user_state['editing_task_id']
+                task = Task.objects.get(id=task_id)
+                new_assignee = User.objects.get(telegram_id=assignee_telegram_id)
+                old_assignee = task.assignee
+                task.assignee = new_assignee
+                task.save()
+                
+                # Уведомляем нового исполнителя
+                try:
+                    bot.send_message(
+                        new_assignee.telegram_id,
+                        f"📋 ВАМ НАЗНАЧЕНА ЗАДАЧА\n\n{format_task_info(task)}"
+                    )
+                except Exception:
+                    pass
+                
+                clear_user_state(chat_id)
+                text = f"✅ Исполнитель задачи '{task.title}' изменен с {old_assignee.user_name} на {new_assignee.user_name}"
+                bot.send_message(chat_id, text)
+                
+                # Показываем обновленную информацию о задаче
+                from bot.handlers.utils import show_task_progress
+                is_creator = str(task.creator.telegram_id) == str(chat_id)
+                is_assignee = str(task.assignee.telegram_id) == str(chat_id)
+                show_task_progress(chat_id, task, is_creator, is_assignee)
+                return
+
             user_state['assignee_id'] = assignee_telegram_id
             set_user_state(chat_id, user_state)
 
