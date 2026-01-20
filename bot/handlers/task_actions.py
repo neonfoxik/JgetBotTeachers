@@ -149,6 +149,11 @@ def task_confirm_callback(call: CallbackQuery) -> None:
         task.closed_at = timezone.now()
         task.save()
 
+        # Логируем в историю
+        from bot.handlers.utils import log_task_history
+        user = User.objects.get(telegram_id=chat_id)
+        log_task_history(task, user, "Выполнение подтверждено создателем")
+
         text = f"✅ Задача '{task.title}' подтверждена и завершена!"
 
         # Уведомляем исполнителя

@@ -19,6 +19,7 @@ from bot.handlers import (
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
     change_assignee_callback, task_close_callback,
     handle_task_report, view_report_attachments_callback, view_task_attachments_callback,
+    handle_task_comment, task_comment_callback, finish_report_callback, clear_report_attachments_callback,
     tasks_back_callback, main_menu_callback, process_calendar_callback,
     add_subtasks_callback, reopen_task_callback,
     start_tutorial_callback
@@ -28,7 +29,7 @@ from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from telebot.apihelper import ApiTelegramException
-from telebot.types import Update
+from telebot.types import Update, Message, CallbackQuery
 from bot import bot, logger
 
 @require_GET
@@ -131,11 +132,14 @@ def master_message_handler(message: Message):
     user_state = get_user_state(str(message.chat.id))
     
     # Если пользователь в процессе создания/редактирования - отправляем туда
-    if user_state and (user_state.get('state') or 'editing_task_id' in user_state or 'adding_subtasks_task_id' in user_state):
-        handle_task_creation_messages(message)
-    else:
-        # Иначе пробуем обработать как отчет по задаче
+    state = user_state.get('state') if user_state else None
+    
+    if state == 'waiting_report':
         handle_task_report(message)
+    elif state == 'waiting_comment':
+        handle_task_comment(message)
+    elif user_state and (state or 'editing_task_id' in user_state or 'adding_subtasks_task_id' in user_state):
+        handle_task_creation_messages(message)
 
 # Callback для создания задач
 skip_description_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_description")(skip_description_callback)
@@ -184,6 +188,11 @@ change_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.start
 # Callback для вложений
 view_report_attachments_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("view_report_attachments_"))(view_report_attachments_callback)
 view_task_attachments_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("view_task_attachments_"))(view_task_attachments_callback)
+
+# Callback для комментариев и отчетов
+task_comment_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("task_comment_"))(task_comment_callback)
+finish_report_handler = bot.callback_query_handler(func=lambda c: c.data == "finish_report")(finish_report_callback)
+clear_report_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "clear_report_attachments")(clear_report_attachments_callback)
 
 # Callback для главного меню
 tasks_back_handler = bot.callback_query_handler(func=lambda c: c.data == "tasks_back")(tasks_back_callback)

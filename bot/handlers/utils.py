@@ -169,7 +169,15 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
         text += f"✅ Завершена: {task.closed_at.strftime('%d.%m.%Y %H:%M')}\n"
 
     if task.status == 'pending_review' and task.report_text:
-        text += f"\n📄 ОТЧЕТ:\n{task.report_text}\n"
+        text += f"\n📄 ОТЧЕТ ИСПОЛНИТЕЛЯ:\n{task.report_text}\n"
+
+    # Добавляем комментарии
+    comments = task.comments.all().order_by('-created_at')[:3]
+    if comments:
+        text += "\n💬 ПОСЛЕДНИЕ КОММЕНТАРИИ:"
+        for comment in comments:
+            text += f"\n▫️ {comment.author.user_name}: {comment.text}"
+        text += "\n"
 
     return text
 
@@ -296,4 +304,23 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
     if task.report_attachments and len(task.report_attachments) > 0:
         markup.add(InlineKeyboardButton("📎 Посмотреть вложения отчета", callback_data=f"view_report_attachments_{task.id}"))
 
+    # Комментарии
+    markup.add(InlineKeyboardButton("💬 Написать комментарий", callback_data=f"task_comment_{task.id}"))
+    markup.add(InlineKeyboardButton("🏠 В меню", callback_data="main_menu"))
+
     return markup
+
+
+def log_task_history(task, user, action, old_value=None, new_value=None):
+    """Логирует действие в историю задачи"""
+    from bot.models import TaskHistory
+    try:
+        TaskHistory.objects.create(
+            task=task,
+            user=user,
+            action=action,
+            old_value=str(old_value) if old_value is not None else None,
+            new_value=str(new_value) if new_value is not None else None
+        )
+    except Exception as e:
+        logger.error(f"Failed to log task history: {e}")

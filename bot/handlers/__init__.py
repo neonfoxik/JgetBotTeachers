@@ -29,7 +29,9 @@ from .task_editing import (
     change_assignee_callback, add_subtasks_callback, reopen_task_callback
 )
 from .reports import (
-    handle_task_report, view_report_attachments_callback
+    handle_task_report, view_report_attachments_callback,
+    handle_task_comment, task_comment_callback,
+    finish_report_callback, clear_report_attachments_callback
 )
 from .main import (
     show_task_progress, tasks_back_callback, main_menu_callback

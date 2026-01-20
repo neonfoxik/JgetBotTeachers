@@ -107,6 +107,9 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
                     task=task,
                     title=subtask_title
                 )
+            # Логируем создание в историю
+            from bot.handlers.utils import log_task_history
+            log_task_history(task, creator, "Задача создана")
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
             success_msg += f"👤 Исполнитель: {assignee.user_name}\n"

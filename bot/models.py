@@ -213,3 +213,64 @@ class UserState(models.Model):
     class Meta:
         verbose_name = 'Состояние пользователя'
         verbose_name_plural = 'Состояния пользователей'
+class TaskComment(models.Model):
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Задача'
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Автор'
+    )
+    text = models.TextField(
+        verbose_name='Текст комментария'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ['created_at']
+
+class TaskHistory(models.Model):
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='history',
+        verbose_name='Задача'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Кто изменил'
+    )
+    action = models.CharField(
+        max_length=200,
+        verbose_name='Действие'
+    )
+    old_value = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Старое значение'
+    )
+    new_value = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Новое значение'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата изменения'
+    )
+
+    class Meta:
+        verbose_name = 'История задачи'
+        verbose_name_plural = 'История задач'
+        ordering = ['-created_at']
