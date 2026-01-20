@@ -310,7 +310,11 @@ def assign_to_creator_callback(call: CallbackQuery) -> None:
         set_user_state(chat_id, user_state)
 
         success, msg, markup = create_task_from_state(chat_id, user_state)
-        clear_user_state(chat_id)
+        
+        # Очищаем состояние только если это не туториал
+        if user_state.get('state') != 'tutorial_waiting_for_creation':
+            clear_user_state(chat_id)
+            
         safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id)
 
 
@@ -458,7 +462,11 @@ def select_user_callback(call: CallbackQuery) -> None:
             set_user_state(chat_id, user_state)
 
             success, msg, markup = create_task_from_state(chat_id, user_state)
-            clear_user_state(chat_id)
+            
+            # Очищаем состояние только если это не туториал
+            if user_state.get('state') != 'tutorial_waiting_for_creation':
+                clear_user_state(chat_id)
+                
             safe_edit_or_send_message(call.message.chat.id, msg, reply_markup=markup, message_id=call.message.message_id)
 
     except Exception as e:
