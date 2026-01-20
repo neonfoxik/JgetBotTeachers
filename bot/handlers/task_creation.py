@@ -8,7 +8,7 @@ from bot.keyboards import (
     get_user_selection_markup, TASK_MANAGEMENT_MARKUP
 )
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from datetime import datetime
 from django.utils import timezone
@@ -104,6 +104,11 @@ def create_task_from_state(chat_id: str, user_state: dict) -> tuple[bool, str, I
                 success_msg += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}"
             if subtasks:
                 success_msg += f"📋 Подзадач: {len(subtasks)}"
+
+            if user_state.get('state') == 'tutorial_waiting_for_creation':
+                from bot.handlers.tutorial import tutorial_task_created
+                tutorial_task_created(chat_id, task.id)
+                return True, success_msg, None # Tutorial handles its own message
 
             return True, success_msg, TASK_MANAGEMENT_MARKUP
 
@@ -417,8 +422,17 @@ def select_user_callback(call: CallbackQuery) -> None:
                 task = Task.objects.get(id=task_id)
                 new_assignee = User.objects.get(telegram_id=assignee_telegram_id)
                 old_assignee = task.assignee
+                
+                if old_assignee.telegram_id == new_assignee.telegram_id:
+                    bot.answer_callback_query(call.id, "⚠️ Этот пользователь уже является исполнителем", show_alert=True)
+                    return
+                
                 task.assignee = new_assignee
-                task.save()
+                try:
+                    task.save()
+                except ValidationError as ve:
+                    bot.answer_callback_query(call.id, f"❌ Ошибка валидации: {ve.message}", show_alert=True)
+                    return
                 
                 # Уведомляем нового исполнителя
                 try:

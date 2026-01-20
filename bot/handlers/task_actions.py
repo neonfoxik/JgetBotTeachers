@@ -119,6 +119,14 @@ def task_complete_callback(call: CallbackQuery) -> None:
 
         safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
+        # Проверка туториала
+        from bot.handlers.utils import get_user_state
+        u_state = get_user_state(chat_id)
+        if u_state.get('state') == 'tutorial_waiting_for_completion':
+            if task.id == u_state.get('tutorial_task_id'):
+                from bot.handlers.tutorial import finish_tutorial
+                finish_tutorial(chat_id)
+
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 

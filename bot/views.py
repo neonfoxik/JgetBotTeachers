@@ -19,7 +19,8 @@ from bot.handlers import (
     change_assignee_callback, task_close_callback,
     handle_task_report, view_report_attachments_callback,
     tasks_back_callback, main_menu_callback, process_calendar_callback,
-    add_subtasks_callback, reopen_task_callback
+    add_subtasks_callback, reopen_task_callback,
+    start_tutorial_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -175,3 +176,6 @@ main_menu_handler = bot.callback_query_handler(func=lambda c: c.data == "main_me
 # Callback для добавления подзадач и изменения статуса задач
 add_subtasks_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("add_subtasks_"))(add_subtasks_callback)
 reopen_task_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("reopen_task_"))(reopen_task_callback)
+
+# Callback для обучения
+start_tutorial_handler = bot.callback_query_handler(func=lambda c: c.data == "start_tutorial")(start_tutorial_callback)
