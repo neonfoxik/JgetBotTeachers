@@ -65,14 +65,16 @@ def handle_registration_last_name(message: Message, chat_id: str, user_state: di
         bot.send_message(chat_id, "❌ Фамилия должна содержать минимум 2 символа. Попробуйте еще раз:")
         return
     
-    # Создаем пользователя с полными данными
+    # Обновляем пользователя с полными данными
     try:
-        user = User.objects.create(
+        user, created = User.objects.update_or_create(
             telegram_id=chat_id,
-            user_name=user_state.get('telegram_username', chat_id),
-            first_name=user_state.get('first_name', ''),
-            last_name=message.text.strip(),
-            is_admin=False
+            defaults={
+                'user_name': user_state.get('telegram_username', chat_id),
+                'first_name': user_state.get('first_name', ''),
+                'last_name': message.text.strip(),
+                'is_admin': False
+            }
         )
         
         clear_user_state(chat_id)
