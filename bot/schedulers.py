@@ -23,7 +23,7 @@ job_defaults = {
     'misfire_grace_time': 30,
 }
 
-scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults, timezone='UTC')
+scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults, timezone='Europe/Moscow')
 
 def send_daily_reminders():
     logger.info("Starting daily reminders task")
@@ -64,17 +64,17 @@ def send_daily_reminders():
                 if urgent_tasks:
                     reminder_text += "\n🚨 **ПРОСРОЧЕННЫЕ:**\n"
                     for task in urgent_tasks:
-                        reminder_text += f"• {task.title} (был до {task.due_date.strftime('%d.%m')})\n"
+                        reminder_text += f"• {task.title} (был до {timezone.localtime(task.due_date).strftime('%d.%m')})\n"
                 
                 if today_tasks:
                     reminder_text += "\n📅 **НА СЕГОДНЯ:**\n"
                     for task in today_tasks:
-                        reminder_text += f"• {task.title} (до {task.due_date.strftime('%H:%M')})\n"
+                        reminder_text += f"• {task.title} (до {timezone.localtime(task.due_date).strftime('%H:%M')})\n"
                 
                 if upcoming_tasks:
                     reminder_text += "\n📆 **СКОРО (3 дня):**\n"
                     for task in upcoming_tasks:
-                        reminder_text += f"• {task.title} ({task.due_date.strftime('%d.%m')})\n"
+                        reminder_text += f"• {task.title} ({timezone.localtime(task.due_date).strftime('%d.%m')})\n"
                 
                 if no_date_tasks and not (urgent_tasks or today_tasks):
                     reminder_text += "\n📝 **БЕЗ СРОКА:**\n"

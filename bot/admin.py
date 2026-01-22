@@ -2,13 +2,14 @@ from django.contrib import admin
 from .models import User, Task, Subtask, UserState
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('telegram_id', 'user_name', 'first_name', 'is_admin', 'timezone')
-    search_fields = ('telegram_id', 'user_name', 'first_name')
+    list_display = ('telegram_id', 'user_name', 'first_name', 'last_name', 'is_admin', 'timezone')
+    list_editable = ('first_name', 'last_name')
+    search_fields = ('telegram_id', 'user_name', 'first_name', 'last_name')
     list_filter = ('is_admin', 'timezone')
     readonly_fields = ('telegram_id',)
     fieldsets = (
         ('Основная информация', {
-            'fields': ('telegram_id', 'user_name', 'first_name')
+            'fields': ('telegram_id', 'user_name', 'first_name', 'last_name')
         }),
         ('Настройки', {
             'fields': ('is_admin', 'timezone')
