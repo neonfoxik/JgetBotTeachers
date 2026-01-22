@@ -143,6 +143,24 @@ def notify_creator_about_report(task: Task) -> None:
         logger.error(f"Не удалось уведомить создателя: {e}")
 
 
+def notify_creator_about_comment(task: Task, comment: TaskComment) -> None:
+    """
+    Уведомляет создателя задачи о новом комментарии
+    """
+    try:
+        notification_text = f"💬 **Новый комментарий к задаче**\n\n"
+        notification_text += f"📋 Задача: {task.title}\n"
+        notification_text += f"👤 Автор комментария: {comment.author.user_name}\n"
+        notification_text += f"💭 Комментарий: {comment.text}\n"
+
+        markup = get_task_actions_markup(task.id, task.status, task.report_attachments, 
+                                        True, False)
+        bot.send_message(task.creator.telegram_id, notification_text, 
+                        reply_markup=markup, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Не удалось уведомить создателя о комментарии: {e}")
+
+
 def initiate_comment(chat_id: str, task_id: int) -> None:
     user_state = get_user_state(chat_id) or {}
     user_state['state'] = 'waiting_comment'
@@ -168,7 +186,7 @@ def handle_task_comment(message: Message) -> None:
         task = Task.objects.get(id=task_id)
         user = get_or_create_user(chat_id)
         
-        TaskComment.objects.create(
+        comment = TaskComment.objects.create(
             task=task,
             author=user,
             text=message.text.strip()
@@ -176,6 +194,10 @@ def handle_task_comment(message: Message) -> None:
         
         bot.send_message(chat_id, "✅ Комментарий добавлен!")
         clear_user_state(chat_id)
+        
+        # Уведомляем создателя задачи, если комментарий оставил не он сам
+        if task.creator.telegram_id != user.telegram_id:
+            notify_creator_about_comment(task, comment)
         
         # Показываем задачу снова
         is_creator = task.creator.telegram_id == user.telegram_id

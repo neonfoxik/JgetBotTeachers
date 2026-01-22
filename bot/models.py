@@ -16,7 +16,14 @@ class User(models.Model):
         blank=True,
         null=True,
         verbose_name='Имя',
-        help_text='Имя пользователя из Telegram'
+        help_text='Имя пользователя'
+    )
+    last_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Фамилия',
+        help_text='Фамилия пользователя'
     )
     is_admin = models.BooleanField(
         default=False,
@@ -35,8 +42,20 @@ class User(models.Model):
         auto_now_add=True,
         verbose_name='Дата регистрации'
     )
+    
+    def get_full_name(self):
+        """Возвращает полное имя пользователя"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        return self.user_name
+    
     def __str__(self):
-        return f"{self.user_name} ({'Админ' if self.is_admin else 'Учитель'})"
+        return f"{self.get_full_name()} ({'Админ' if self.is_admin else 'Учитель'})"
+    
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
