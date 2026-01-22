@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import User, Task, Subtask, UserState
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('telegram_id', 'user_name', 'first_name', 'last_name', 'is_admin', 'timezone')
+    list_display = ('telegram_id', 'get_telegram_handle', 'first_name', 'last_name', 'is_admin', 'timezone')
     list_editable = ('first_name', 'last_name')
     search_fields = ('telegram_id', 'user_name', 'first_name', 'last_name')
     list_filter = ('is_admin', 'timezone')
@@ -15,6 +15,12 @@ class UserAdmin(admin.ModelAdmin):
             'fields': ('is_admin', 'timezone')
         }),
     )
+
+    def get_telegram_handle(self, obj):
+        if obj.user_name and not obj.user_name.startswith('user_') and obj.user_name != obj.telegram_id:
+            return f"@{obj.user_name}"
+        return "—"
+    get_telegram_handle.short_description = 'TG Handle'
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'creator', 'assignee', 'status', 'progress', 'due_date', 'created_at')

@@ -8,7 +8,7 @@ def start_registration(chat_id: str, telegram_username: str = None, telegram_fir
     """Начинает процесс регистрации нового пользователя"""
     user_state = {
         'state': 'registration_waiting_first_name',
-        'telegram_username': telegram_username or f"user_{chat_id}",
+        'telegram_username': telegram_username or chat_id,
         'telegram_first_name': telegram_first_name or ""
     }
     set_user_state(chat_id, user_state)
@@ -69,7 +69,7 @@ def handle_registration_last_name(message: Message, chat_id: str, user_state: di
     try:
         user = User.objects.create(
             telegram_id=chat_id,
-            user_name=user_state.get('telegram_username', f"user_{chat_id}"),
+            user_name=user_state.get('telegram_username', chat_id),
             first_name=user_state.get('first_name', ''),
             last_name=message.text.strip(),
             is_admin=False
@@ -87,15 +87,7 @@ def handle_registration_last_name(message: Message, chat_id: str, user_state: di
 
 def show_welcome_menu(chat_id: str, user: User) -> None:
     """Показывает приветственное меню после регистрации"""
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
-    markup.add(InlineKeyboardButton("➕ Создать задачу", callback_data="create_task"))
-    markup.add(InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks"))
-    markup.add(InlineKeyboardButton("👤 Профиль", callback_data="profile"))
-    
-    # Если туториал не пройден - добавляем кнопку
-    if not user.is_tutorial_finished:
-        markup.add(InlineKeyboardButton("🎓 Пройти обучение", callback_data="start_tutorial"))
+    from bot.keyboards import get_main_menu
     
     welcome_text = f"""✅ Регистрация завершена!
 
@@ -103,4 +95,4 @@ def show_welcome_menu(chat_id: str, user: User) -> None:
 
 🤖 Я бот для управления задачами. Выберите действие:"""
     
-    bot.send_message(chat_id, welcome_text, reply_markup=markup)
+    bot.send_message(chat_id, welcome_text, reply_markup=get_main_menu(user))

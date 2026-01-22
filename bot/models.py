@@ -51,7 +51,13 @@ class User(models.Model):
             return self.first_name
         elif self.last_name:
             return self.last_name
-        return self.user_name
+        
+        # Если имен нет, пробуем user_name. Если это ID или системное 'user_', возвращаем ID
+        if self.user_name:
+            if self.user_name.startswith('user_'):
+                return f"ID {self.telegram_id}"
+            return self.user_name
+        return f"ID {self.telegram_id}"
     
     def __str__(self):
         return f"{self.get_full_name()} ({'Админ' if self.is_admin else 'Учитель'})"

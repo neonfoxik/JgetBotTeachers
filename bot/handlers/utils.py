@@ -121,7 +121,7 @@ def get_or_create_user(telegram_id: str, telegram_username: str = None, first_na
     user, created = User.objects.get_or_create(
         telegram_id=telegram_id,
         defaults={
-            'user_name': telegram_username or f"user_{telegram_id}",
+            'user_name': telegram_username or telegram_id,
             'first_name': first_name or "",
             'is_admin': False
         }
@@ -164,8 +164,8 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     text = f"📋 Задача\n\n"
     text += f"📝 Название: {task.title}\n"
     text += f"📊 Статус: {status_text}\n"
-    text += f"👤 Создатель: {task.creator.user_name}\n"
-    text += f"👨‍💼 Исполнитель: {task.assignee.user_name}\n"
+    text += f"👤 Создатель: {task.creator.get_full_name()}\n"
+    text += f"👨‍💼 Исполнитель: {task.assignee.get_full_name()}\n"
 
     if task.description:
         text += f"📖 Описание: {task.description}\n"
@@ -187,7 +187,7 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     if comments:
         text += "\n💬 Последние комментарии:"
         for comment in comments:
-            text += f"\n▫️ {comment.author.user_name}: {comment.text}"
+            text += f"\n▫️ {comment.author.get_full_name()}: {comment.text}"
         text += "\n"
 
     return text
