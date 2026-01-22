@@ -15,27 +15,36 @@ def start_command(message: Message) -> None:
         chat_id = str(message.chat.id)
         logger.info(f"Обработчик /start вызван для пользователя {chat_id}")
         
-        # Проверяем существование пользователя до создания
+        # Проверяем существование пользователя
         user_exists = User.objects.filter(telegram_id=chat_id).exists()
         
-        user = get_or_create_user(
-            telegram_id=chat_id,
-            telegram_username=message.from_user.username,
-            first_name=message.from_user.first_name
-        )
-        logger.info(f"Пользователь получен/создан: {user.user_name}")
+        if not user_exists:
+            # Новый пользователь - запускаем процесс регистрации
+            from bot.handlers.registration import start_registration
+            start_registration(
+                chat_id,
+                telegram_username=message.from_user.username,
+                telegram_first_name=message.from_user.first_name
+            )
+            logger.info(f"Начата регистрация для нового пользователя {chat_id}")
+            return
+        
+        # Существующий пользователь - показываем меню
+        user = User.objects.get(telegram_id=chat_id)
+        logger.info(f"Пользователь найден: {user.user_name}")
 
         # Меню с проверкой туториала
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
         markup.add(InlineKeyboardButton("➕ Создать задачу", callback_data="create_task"))
         markup.add(InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks"))
+        markup.add(InlineKeyboardButton("👤 Профиль", callback_data="profile"))
         
         # Если туториал не пройден - добавляем кнопку
         if not user.is_tutorial_finished:
             markup.add(InlineKeyboardButton("🎓 Пройти обучение", callback_data="start_tutorial"))
 
-        welcome_text = f"""👋 Привет, {user.first_name or user.user_name}!
+        welcome_text = f"""👋 Привет, {user.get_full_name()}!
 
 🤖 Я бот для управления задачами. Выберите действие:"""
 

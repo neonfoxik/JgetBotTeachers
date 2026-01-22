@@ -22,7 +22,9 @@ from bot.handlers import (
     handle_task_comment, task_comment_callback, finish_report_callback, clear_report_attachments_callback,
     tasks_back_callback, main_menu_callback, process_calendar_callback,
     add_subtasks_callback, reopen_task_callback,
-    start_tutorial_callback, skip_tutorial_callback
+    start_tutorial_callback, skip_tutorial_callback,
+    handle_registration_input, handle_profile_input,
+    profile_callback, profile_edit_first_name_callback, profile_edit_last_name_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -134,6 +136,16 @@ def master_message_handler(message: Message):
     # Если пользователь в процессе создания/редактирования - отправляем туда
     state = user_state.get('state') if user_state else None
     
+    # Проверяем состояния регистрации
+    if state and state.startswith('registration_'):
+        if handle_registration_input(message):
+            return
+    
+    # Проверяем состояния редактирования профиля
+    if state in ['waiting_first_name', 'waiting_last_name']:
+        handle_profile_input(message)
+        return
+    
     if state == 'waiting_report':
         handle_task_report(message)
     elif state == 'waiting_comment':
@@ -205,3 +217,8 @@ reopen_task_handler = bot.callback_query_handler(func=lambda c: c.data.startswit
 # Callback для обучения
 start_tutorial_handler = bot.callback_query_handler(func=lambda c: c.data == "start_tutorial")(start_tutorial_callback)
 skip_tutorial_handler = bot.callback_query_handler(func=lambda c: c.data == "skip_tutorial")(skip_tutorial_callback)
+
+# Callback для профиля
+profile_handler = bot.callback_query_handler(func=lambda c: c.data == "profile")(profile_callback)
+profile_edit_first_name_handler = bot.callback_query_handler(func=lambda c: c.data == "profile_edit_first_name")(profile_edit_first_name_callback)
+profile_edit_last_name_handler = bot.callback_query_handler(func=lambda c: c.data == "profile_edit_last_name")(profile_edit_last_name_callback)
