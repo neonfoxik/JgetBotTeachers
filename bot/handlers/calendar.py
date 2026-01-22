@@ -58,8 +58,8 @@ def create_calendar(year: int = None, month: int = None, is_tutorial: bool = Fal
                 today = now.date()
 
                 if current_date < today:
-                    # Прошедшие дни - показываем уведомление при нажатии
-                    week_buttons.append(InlineKeyboardButton(str(day), callback_data=f"calendar_past_date_{year}_{month}_{day}"))
+                    # Прошедшие дни - не показываем (пустая ячейка)
+                    week_buttons.append(InlineKeyboardButton(" ", callback_data="calendar_ignore"))
                 else:
                     # Сегодня и будущие дни - активные
                     week_buttons.append(InlineKeyboardButton(str(day), callback_data=f"calendar_date_{year}_{month}_{day}"))
@@ -77,24 +77,37 @@ def create_calendar(year: int = None, month: int = None, is_tutorial: bool = Fal
     return text, markup
 
 
-def create_time_selector() -> tuple[str, InlineKeyboardMarkup]:
+def create_time_selector(selected_date: datetime = None) -> tuple[str, InlineKeyboardMarkup]:
     """
     Создает селектор времени
+    Если selected_date - сегодняшняя дата, то не показываем прошедшее время
     """
     markup = InlineKeyboardMarkup()
+    now = timezone.now()
 
     # Предустановленные времена
-    times = [
-        ("09:00", "9_00"), ("10:00", "10_00"), ("11:00", "11_00"),
-        ("12:00", "12_00"), ("13:00", "13_00"), ("14:00", "14_00"),
-        ("15:00", "15_00"), ("16:00", "16_00"), ("17:00", "17_00"),
-        ("18:00", "18_00"), ("19:00", "19_00"), ("20:00", "20_00")
+    all_times = [
+        ("00:00", "0_00", 0), ("08:00", "8_00", 8), ("12:00", "12_00", 12),
+        ("17:00", "17_00", 17), ("21:00", "21_00", 21)
     ]
 
-    # Добавляем ряды по 4 кнопки
-    for i in range(0, len(times), 4):
+    # Фильтруем времена, если выбрана сегодняшняя дата
+    times = []
+    is_today = selected_date and selected_date.date() == now.date()
+    
+    for time_text, time_data, hour in all_times:
+        if is_today:
+            # Если сегодня, показываем только будущее время
+            if hour > now.hour or (hour == now.hour and now.minute < 59):
+                times.append((time_text, time_data))
+        else:
+            # Если не сегодня, показываем все времена
+            times.append((time_text, time_data))
+
+    # Добавляем все доступные кнопки в один ряд
+    if times:
         row = []
-        for time_text, time_data in times[i:i+4]:
+        for time_text, time_data in times:
             row.append(InlineKeyboardButton(time_text, callback_data=f"calendar_time_{time_data}"))
         markup.row(*row)
 
@@ -172,11 +185,12 @@ def process_calendar_callback(call) -> None:
         user_state = get_user_state(chat_id)
 
         # Проверяем, не является ли выбранная дата прошедшей
-        selected_date = datetime(year, month, day).date()
+        selected_date = datetime(year, month, day)
+        selected_date = selected_date.replace(tzinfo=timezone.get_current_timezone())
         now = timezone.now()
         today = now.date()
 
-        if selected_date < today:
+        if selected_date.date() < today:
             bot.answer_callback_query(call.id, "❌ Нельзя выбрать прошедшую дату", show_alert=True)
             return
 
@@ -184,7 +198,7 @@ def process_calendar_callback(call) -> None:
             user_state['selected_date'] = f"{year}-{month:02d}-{day:02d}"
             set_user_state(chat_id, user_state)
 
-        text, markup = create_time_selector()
+        text, markup = create_time_selector(selected_date)
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
     elif data.startswith("calendar_past_date_"):
