@@ -3,7 +3,7 @@ from bot.handlers.utils import (
 )
 from bot import bot, logger
 from bot.models import User, Task
-from bot.keyboards import get_tasks_list_markup, TASK_MANAGEMENT_MARKUP, main_markup
+from bot.keyboards import get_tasks_list_markup, TASK_MANAGEMENT_MARKUP, main_markup, get_main_menu
 from bot.handlers.tasks import initiate_task_close
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from django.core.exceptions import ObjectDoesNotExist
@@ -34,15 +34,7 @@ def start_command(message: Message) -> None:
         logger.info(f"Пользователь найден: {user.user_name}")
 
         # Меню с проверкой туториала
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
-        markup.add(InlineKeyboardButton("➕ Создать задачу", callback_data="create_task"))
-        markup.add(InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks"))
-        markup.add(InlineKeyboardButton("👤 Профиль", callback_data="profile"))
-        
-        # Если туториал не пройден - добавляем кнопку
-        if not user.is_tutorial_finished:
-            markup.add(InlineKeyboardButton("🎓 Пройти обучение", callback_data="start_tutorial"))
+        markup = get_main_menu(user)
 
         welcome_text = f"""👋 Привет, {user.get_full_name()}!
 

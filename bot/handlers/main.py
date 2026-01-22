@@ -20,5 +20,8 @@ def tasks_back_callback(call: CallbackQuery) -> None:
 
 
 def main_menu_callback(call: CallbackQuery) -> None:
+    chat_id = get_chat_id_from_update(call)
+    user = get_or_create_user(chat_id)
     text = "🏠 Главное меню"
-    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
+    from bot.keyboards import get_main_menu
+    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=get_main_menu(user), message_id=call.message.message_id)

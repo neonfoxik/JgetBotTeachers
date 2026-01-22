@@ -6,7 +6,7 @@ from bot.handlers.main import show_task_progress
 from bot import bot, logger
 from bot.models import User, Task, TaskComment
 from bot.keyboards import (
-    get_task_actions_markup, TASK_MANAGEMENT_MARKUP
+    get_task_actions_markup, TASK_MANAGEMENT_MARKUP, get_main_menu
 )
 from telebot.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from django.core.exceptions import ObjectDoesNotExist
@@ -90,7 +90,7 @@ def handle_task_report(message: Message) -> None:
         notify_creator_about_report(active_task)
 
         clear_user_state(chat_id)
-        bot.send_message(message.chat.id, "✅ Отчет успешно отправлен создателю для проверки", reply_markup=TASK_MANAGEMENT_MARKUP)
+        bot.send_message(message.chat.id, "✅ Отчет успешно отправлен создателю для проверки", reply_markup=get_main_menu(user))
 
     except Exception as e:
         logger.error(f"Ошибка при отправке отчета: {e}")
@@ -124,7 +124,8 @@ def finish_report_callback(call: CallbackQuery) -> None:
         
         clear_user_state(chat_id)
         bot.edit_message_text("✅ Отчет успешно отправлен!", chat_id, call.message.message_id)
-        bot.send_message(chat_id, "Вы вернулись в главное меню", reply_markup=TASK_MANAGEMENT_MARKUP)
+        user = get_or_create_user(chat_id)
+        bot.send_message(chat_id, "Вы вернулись в главное меню", reply_markup=get_main_menu(user))
         
     except Exception as e:
         logger.error(f"Error finishing report: {e}")
@@ -161,6 +162,24 @@ def notify_creator_about_comment(task: Task, comment: TaskComment) -> None:
         logger.error(f"Не удалось уведомить создателя о комментарии: {e}")
 
 
+def notify_assignee_about_comment(task: Task, comment: TaskComment) -> None:
+    """
+    Уведомляет исполнителя задачи о новом комментарии
+    """
+    try:
+        notification_text = f"💬 **Новый комментарий к задаче**\n\n"
+        notification_text += f"📋 Задача: {task.title}\n"
+        notification_text += f"👤 Автор комментария: {comment.author.user_name}\n"
+        notification_text += f"💭 Комментарий: {comment.text}\n"
+
+        markup = get_task_actions_markup(task.id, task.status, task.report_attachments, 
+                                        False, True)
+        bot.send_message(task.assignee.telegram_id, notification_text, 
+                        reply_markup=markup, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"Не удалось уведомить исполнителя о комментарии: {e}")
+
+
 def initiate_comment(chat_id: str, task_id: int) -> None:
     user_state = get_user_state(chat_id) or {}
     user_state['state'] = 'waiting_comment'
@@ -195,9 +214,14 @@ def handle_task_comment(message: Message) -> None:
         bot.send_message(chat_id, "✅ Комментарий добавлен!")
         clear_user_state(chat_id)
         
-        # Уведомляем создателя задачи, если комментарий оставил не он сам
-        if task.creator.telegram_id != user.telegram_id:
-            notify_creator_about_comment(task, comment)
+        # Уведомляем о комментарии согласно логике
+        if task.creator.telegram_id != task.assignee.telegram_id:
+            if user.telegram_id == task.creator.telegram_id:
+                # Если оставил создатель - уведомляем исполнителя
+                notify_assignee_about_comment(task, comment)
+            elif user.telegram_id == task.assignee.telegram_id:
+                # Если оставил исполнитель - уведомляем создателя
+                notify_creator_about_comment(task, comment)
         
         # Показываем задачу снова
         is_creator = task.creator.telegram_id == user.telegram_id

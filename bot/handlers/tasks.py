@@ -5,7 +5,7 @@ from bot.models import User, Task, Subtask, UserState
 from bot.keyboards import (
     get_task_actions_markup, get_task_confirmation_markup,
     get_subtask_toggle_markup, get_tasks_list_markup, get_user_selection_markup,
-    TASK_MANAGEMENT_MARKUP, UNIVERSAL_BUTTONS, main_markup
+    TASK_MANAGEMENT_MARKUP, UNIVERSAL_BUTTONS, main_markup, get_main_menu
 )
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, get_user_state,
@@ -163,7 +163,8 @@ def initiate_task_close(chat_id: str, task: Task, message_id: int = None) -> Non
                 print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
 
             text = f"✅ Задача закрыта\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!"
-            safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=message_id)
+            user = get_or_create_user(chat_id)
+            safe_edit_or_send_message(chat_id, text, reply_markup=get_main_menu(user), message_id=message_id)
         else:
             # Отправляем запрос на отчет
             text = f"📄 **Отправка отчета по задаче**\n\n{format_task_info(task)}\n\n"

@@ -2,13 +2,24 @@ from telebot.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
 )
-main_markup = InlineKeyboardMarkup()
-main_markup.add(
-    InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"),
-    InlineKeyboardButton("➕ Создать задачу", callback_data="create_task")
-)
-main_markup.add(InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks"))
-TASK_MANAGEMENT_MARKUP = InlineKeyboardMarkup()
+def get_main_menu(user=None) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup()
+    markup.add(
+        InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"),
+        InlineKeyboardButton("➕ Создать задачу", callback_data="create_task")
+    )
+    markup.add(
+        InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks"),
+        InlineKeyboardButton("👤 Профиль", callback_data="profile")
+    )
+    
+    if user and not user.is_tutorial_finished:
+        markup.add(InlineKeyboardButton("🎓 Пройти обучение", callback_data="start_tutorial"))
+    
+    return markup
+
+main_markup = get_main_menu()
+TASK_MANAGEMENT_MARKUP = get_main_menu()
 UNIVERSAL_BUTTONS = InlineKeyboardMarkup()
 UNIVERSAL_BUTTONS.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
 def get_task_actions_markup(task_id: int, task_status: str = None, report_attachments: list = None,
@@ -121,8 +132,3 @@ def get_tasks_list_markup(tasks, is_creator_view: bool = False) -> InlineKeyboar
             callback_data=f"task_view_{task.id}_{'creator' if is_creator_view else 'assignee'}"
         ))
     return markup
-TASK_MANAGEMENT_MARKUP = InlineKeyboardMarkup()
-btn1 = InlineKeyboardButton("📋 Мои задачи", callback_data="tasks")
-btn2 = InlineKeyboardButton("➕ Создать задачу", callback_data="create_task")
-btn3 = InlineKeyboardButton("📝 Созданные мной", callback_data="my_created_tasks")
-TASK_MANAGEMENT_MARKUP.add(btn1, btn2).add(btn3)
