@@ -1,6 +1,6 @@
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
-    check_permissions
+    check_permissions, check_registration
 )
 from bot import bot, logger
 from bot.models import User, Task
@@ -31,6 +31,8 @@ def show_task_edit_menu(call: CallbackQuery, task: Task) -> None:
 
 
 def task_edit_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)

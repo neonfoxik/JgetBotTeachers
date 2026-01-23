@@ -1,6 +1,6 @@
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
-    check_permissions, show_task_progress
+    check_permissions, show_task_progress, check_registration
 )
 from bot.models import Task
 
@@ -80,6 +80,8 @@ def task_progress_callback(call: CallbackQuery) -> None:
 
 
 def task_complete_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
@@ -137,6 +139,8 @@ def task_complete_callback(call: CallbackQuery) -> None:
 
 
 def task_confirm_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
@@ -177,6 +181,8 @@ def task_confirm_callback(call: CallbackQuery) -> None:
 
 
 def task_reject_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
@@ -213,6 +219,8 @@ def task_reject_callback(call: CallbackQuery) -> None:
 
 
 def subtask_toggle_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         parts = call.data.split('_')
         task_id = int(parts[2])
@@ -250,6 +258,8 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
 
 
 def task_delete_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
@@ -280,6 +290,8 @@ def task_delete_callback(call: CallbackQuery) -> None:
 
 
 def confirm_delete_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
@@ -314,6 +326,8 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
 
 
 def task_status_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
@@ -339,6 +353,8 @@ def task_status_callback(call: CallbackQuery) -> None:
 
 def task_close_callback(call: CallbackQuery) -> None:
     """Обработчик нажатия кнопки 'Отправить на проверку'"""
+    if not check_registration(call):
+        return
     logger.info("=== TASK_CLOSE_CALLBACK STARTED ===")
     logger.info(f"Callback data: {call.data}")
 
