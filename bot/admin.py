@@ -55,7 +55,7 @@ class TaskAdmin(admin.ModelAdmin):
             'fields': ('title', 'description', 'creator', 'assignee', 'assigned_role')
         }),
         ('Статус и прогресс', {
-            'fields': ('status', 'progress', 'due_date')
+            'fields': ('status', 'progress', 'due_date', 'notification_interval', 'last_notified_at')
         }),
         ('Отчет', {
             'fields': ('report_text', 'report_attachments'),

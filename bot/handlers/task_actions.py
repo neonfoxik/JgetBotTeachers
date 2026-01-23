@@ -35,6 +35,8 @@ from django.utils import timezone
 
 
 def task_view_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         parts = call.data.split('_')
         task_id = int(parts[2])
@@ -59,6 +61,8 @@ def task_view_callback(call: CallbackQuery) -> None:
 
 
 def task_progress_callback(call: CallbackQuery) -> None:
+    if not check_registration(call):
+        return
     try:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)

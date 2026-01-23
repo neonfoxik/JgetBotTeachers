@@ -141,6 +141,17 @@ class Task(models.Model):
         null=True,
         help_text='Роль, которой назначена задача (все пользователи с этой ролью имеют доступ)'
     )
+    notification_interval = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Интервал напоминаний (мин)',
+        help_text='Интервал отправки напоминаний о задаче. Если не указано, напоминания не отправляются.'
+    )
+    last_notified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата последнего уведомления'
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

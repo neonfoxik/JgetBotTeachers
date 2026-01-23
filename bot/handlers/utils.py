@@ -141,22 +141,56 @@ def get_or_create_user(telegram_id: str, telegram_username: str = None, first_na
 def check_registration(update) -> bool:
     """
     Проверяет, зарегистрирован ли пользователь (есть ли он в БД и заполнены ли имя/фамилия).
+    Если данных нет, ПРИНУДИТЕЛЬНО запускает процесс регистрации.
     Возвращает True если всё ок, False если нужно регистрироваться.
     """
     chat_id = get_chat_id_from_update(update)
+    
+    # Если пользователь уже в процессе регистрации, не запускаем её снова
+    user_state = get_user_state(chat_id)
+    if user_state and user_state.get('state', '').startswith('registration_'):
+        return False
+
     try:
         user = User.objects.get(telegram_id=chat_id)
         if not user.first_name or not user.last_name:
-            text = "⚠️ Пожалуйста, завершите регистрацию, введя свои данные.\nЕсли регистрация не началась, введите /start"
+            # Импортируем внутри функции, чтобы избежать циклической зависимости
+            from bot.handlers.registration import start_registration
+            
+            # Получаем данные из сообщения или коллбэка
+            from_user = None
+            if hasattr(update, 'from_user'):
+                from_user = update.from_user
+            elif hasattr(update, 'message') and update.message:
+                from_user = update.message.from_user
+            
+            username = from_user.username if from_user else None
+            first_name = from_user.first_name if from_user else None
+            
+            # Запускаем процесс регистрации
+            start_registration(chat_id, telegram_username=username, telegram_first_name=first_name)
+            
             if hasattr(update, 'callback_query') or hasattr(update, 'data'):
-                bot.answer_callback_query(update.id, text, show_alert=True)
-            else:
-                bot.send_message(chat_id, text)
+                try:
+                    bot.answer_callback_query(update.id, "⚠️ Пожалуйста, завершите регистрацию", show_alert=True)
+                except:
+                    pass
             return False
+            
         return True
     except User.DoesNotExist:
-        text = "⚠️ Вы не зарегистрированы в системе. Пожалуйста, введите /start для начала регистрации."
-        bot.send_message(chat_id, text)
+        from bot.handlers.registration import start_registration
+        
+        from_user = None
+        if hasattr(update, 'from_user'):
+            from_user = update.from_user
+        elif hasattr(update, 'message') and getattr(update, 'message', None):
+            from_user = update.message.from_user
+            
+        username = from_user.username if from_user else None
+        first_name = from_user.first_name if from_user else None
+        
+        start_registration(chat_id, telegram_username=username, telegram_first_name=first_name)
         return False
 
 

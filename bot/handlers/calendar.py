@@ -26,14 +26,14 @@ def create_calendar(year: int = None, month: int = None, is_tutorial: bool = Fal
     # Кнопки навигации
     nav_buttons = []
     if month > 1:
-        nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year}_{month}"))
+        nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year}_{month-1}"))
     else:
         nav_buttons.append(InlineKeyboardButton("◀️", callback_data=f"calendar_prev_{year-1}_{12}"))
 
     nav_buttons.append(InlineKeyboardButton(f"{month_names[month-1]} {year}", callback_data="calendar_ignore"))
 
     if month < 12:
-        nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year}_{month}"))
+        nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year}_{month+1}"))
     else:
         nav_buttons.append(InlineKeyboardButton("▶️", callback_data=f"calendar_next_{year+1}_{1}"))
 
@@ -265,12 +265,12 @@ def process_calendar_callback(call) -> None:
             else:
                 # Контекст создания задачи
                 user_state['due_date'] = due_date.isoformat()  # Сохраняем как строку ISO
-                user_state['state'] = 'waiting_assignee_selection'
+                user_state['state'] = 'waiting_notification_interval'
                 set_user_state(chat_id, user_state)
 
-                from bot.handlers.task_creation import show_assignee_selection_menu
-                show_assignee_selection_menu(chat_id, user_state, call)
-                return  # Не отправляем сообщение, функция show_assignee_selection_menu сама обработает
+                from bot.handlers.task_creation import show_notification_selection_menu
+                show_notification_selection_menu(chat_id, user_state, call)
+                return  # Не отправляем сообщение, функция show_notification_selection_menu сама обработает
 
             if markup:
                 bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
@@ -310,11 +310,11 @@ def process_calendar_callback(call) -> None:
                     markup = None
             else:
                 user_state['due_date'] = due_date.isoformat()  # Сохраняем как строку ISO
-                user_state['state'] = 'waiting_assignee_selection'
+                user_state['state'] = 'waiting_notification_interval'
                 set_user_state(chat_id, user_state)
 
-                from bot.handlers.task_creation import show_assignee_selection_menu
-                show_assignee_selection_menu(chat_id, user_state, call)
+                from bot.handlers.task_creation import show_notification_selection_menu
+                show_notification_selection_menu(chat_id, user_state, call)
                 return
 
             if markup:
@@ -345,11 +345,11 @@ def process_calendar_callback(call) -> None:
                     markup = None
             else:
                 user_state['due_date'] = None
-                user_state['state'] = 'waiting_assignee_selection'
+                user_state['state'] = 'waiting_notification_interval'
                 set_user_state(chat_id, user_state)
 
-                from bot.handlers.task_creation import show_assignee_selection_menu
-                show_assignee_selection_menu(chat_id, user_state, call)
+                from bot.handlers.task_creation import show_notification_selection_menu
+                show_notification_selection_menu(chat_id, user_state, call)
                 return
 
             if markup:

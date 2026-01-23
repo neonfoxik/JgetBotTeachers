@@ -14,6 +14,77 @@ from datetime import datetime
 from django.utils import timezone
 
 
+
+def show_notification_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
+    """Показывает меню выбора интервала уведомлений"""
+    text = "🔔 **ШАГ 5.5: ОПОВЕЩЕНИЯ**\n\nВыберите, как часто бот должен присылать напоминания об этой задаче до её завершения:"
+    
+    markup = InlineKeyboardMarkup()
+    # Кнопки раз в 5, 10, 15 минут
+    markup.row(
+        InlineKeyboardButton("5 мин", callback_data="set_notify_5"),
+        InlineKeyboardButton("10 мин", callback_data="set_notify_10"),
+        InlineKeyboardButton("15 мин", callback_data="set_notify_15")
+    )
+    # Кнопки раз в 30 мин, 1 час, 2 часа
+    markup.row(
+        InlineKeyboardButton("30 мин", callback_data="set_notify_30"),
+        InlineKeyboardButton("1 час", callback_data="set_notify_60"),
+        InlineKeyboardButton("2 часа", callback_data="set_notify_120")
+    )
+    # Кнопки 4, 5, 12 часов
+    markup.row(
+        InlineKeyboardButton("4 часа", callback_data="set_notify_240"),
+        InlineKeyboardButton("5 часов", callback_data="set_notify_300"),
+        InlineKeyboardButton("12 часов", callback_data="set_notify_720")
+    )
+    # Кнопки 24 часа + Без оповещений
+    markup.row(
+        InlineKeyboardButton("24 часа", callback_data="set_notify_1440"),
+        InlineKeyboardButton("🚫 Без оповещений", callback_data="set_notify_none")
+    )
+    
+    if not user_state.get('is_tutorial'):
+        markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
+
+    if call:
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
+    else:
+        bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+
+
+def select_notification_interval_callback(call: CallbackQuery) -> None:
+    """Обработчик выбора интервала уведомлений"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        data = call.data
+        if data == "set_notify_none":
+            interval = None
+        else:
+            try:
+                interval = int(data.split('_')[2])
+            except (IndexError, ValueError):
+                interval = None
+        
+        user_state['notification_interval'] = interval
+        user_state['state'] = 'waiting_assignee_selection'
+        set_user_state(chat_id, user_state)
+        # Увеличиваем шаг для исполнителя, так как добавили промежуточный шаг
+        show_assignee_selection_menu(chat_id, user_state, call)
+
+
+def skip_notification_interval_callback(call: CallbackQuery) -> None:
+    """Пропуск настройки уведомлений"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['notification_interval'] = None
+        user_state['state'] = 'waiting_assignee_selection'
+        set_user_state(chat_id, user_state)
+        show_assignee_selection_menu(chat_id, user_state, call)
+
+
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню выбора исполнителя с кнопками: Я сам, Выбрать пользователя, Назначить роли, Отмена"""
     text = "👤 **ШАГ 6: ИСПОЛНИТЕЛЬ**\n\n"
@@ -115,6 +186,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
                 creator=creator,
                 assignee=assignee,
                 assigned_role=assigned_role,
+                notification_interval=user_state.get('notification_interval'),
                 due_date=due_date_parsed,
                 attachments=user_state.get('attachments', [])
             )
@@ -410,9 +482,9 @@ def skip_due_date_callback(call: CallbackQuery) -> None:
     user_state = get_user_state(chat_id)
     if user_state:
         user_state['due_date'] = None
-        user_state['state'] = 'waiting_assignee_selection'
+        user_state['state'] = 'waiting_notification_interval'
         set_user_state(chat_id, user_state)
-        show_assignee_selection_menu(chat_id, user_state, call)
+        show_notification_selection_menu(chat_id, user_state, call)
 
 
 def assign_to_creator_callback(call: CallbackQuery) -> None:

@@ -84,6 +84,8 @@ def my_created_tasks_callback(call: CallbackQuery) -> None:
         except:
             pass
 def my_created_tasks_command_logic(update) -> None:
+    if not check_registration(update):
+        return
     chat_id = get_chat_id_from_update(update)
     user = get_or_create_user(chat_id)
     created_tasks = Task.objects.filter(creator=user).order_by('-created_at')

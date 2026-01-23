@@ -12,6 +12,7 @@ from bot.handlers import (
     skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback,
+    select_notification_interval_callback, skip_notification_interval_callback,
     task_view_callback, task_progress_callback, task_complete_callback,
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
     task_delete_callback, confirm_delete_callback, task_status_callback,
@@ -142,6 +143,12 @@ def master_message_handler(message: Message):
         if handle_registration_input(message):
             return
     
+    # ПРИНУДИТЕЛЬНАЯ ПРОВЕРКА РЕГИСТРАЦИИ для всех остальных случаев
+    # Если у пользователя нет имени/фамилии, эта функция запустит процесс регистрации
+    from bot.handlers.utils import check_registration
+    if not check_registration(message):
+        return
+    
     # Проверяем состояния редактирования профиля
     if state in ['waiting_first_name', 'waiting_last_name']:
         handle_profile_input(message)
@@ -172,6 +179,9 @@ back_to_assignee_selection_handler = bot.callback_query_handler(func=lambda c: c
 back_to_assignee_type_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_assignee_type")(back_to_assignee_type_callback)
 cancel_task_creation_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
 clear_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "clear_attachments")(clear_attachments_callback)
+# Callback для уведомлений
+select_notification_interval_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("set_notify_"))(select_notification_interval_callback)
+
 finish_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "finish_attachments")(finish_attachments_callback)
 
 # Callback для ролей

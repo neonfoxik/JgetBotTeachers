@@ -21,7 +21,8 @@ from .task_creation import (
     clear_attachments_callback, finish_attachments_callback,
     skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
-    back_to_assignee_type_callback, cancel_task_creation_callback
+    back_to_assignee_type_callback, cancel_task_creation_callback,
+    select_notification_interval_callback, skip_notification_interval_callback
 )
 from .role_handlers import (
     choose_role_from_list_callback, select_role_callback

@@ -16,21 +16,12 @@ def start_command(message: Message) -> None:
         chat_id = str(message.chat.id)
         logger.info(f"Обработчик /start вызван для пользователя {chat_id}")
         
-        # Проверяем существование пользователя
-        user_exists = User.objects.filter(telegram_id=chat_id).exists()
-        
-        if not user_exists:
-            # Новый пользователь - запускаем процесс регистрации
-            from bot.handlers.registration import start_registration
-            start_registration(
-                chat_id,
-                telegram_username=message.from_user.username,
-                telegram_first_name=message.from_user.first_name
-            )
-            logger.info(f"Начата регистрация для нового пользователя {chat_id}")
+        # Проверяем регистрацию (функция сама запустит процесс, если данных нет)
+        if not check_registration(message):
+            logger.info(f"Запущена регистрация для пользователя {chat_id}")
             return
         
-        # Существующий пользователь - показываем меню
+        # Существующий пользователь с полными данными - показываем меню
         user = User.objects.get(telegram_id=chat_id)
         logger.info(f"Пользователь найден: {user.user_name}")
 
