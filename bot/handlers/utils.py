@@ -257,10 +257,14 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
 
 
 def get_chat_id_from_update(update) -> str:
+    if hasattr(update, 'chat') and update.chat:
+        return str(update.chat.id)
     if hasattr(update, 'message') and update.message:
         return str(update.message.chat.id)
     elif hasattr(update, 'callback_query') and update.callback_query:
-        return str(update.callback_query.message.chat.id)
+        # У CallbackQuery сообщение находится в поле message
+        if update.message and update.message.chat:
+            return str(update.message.chat.id)
     return ""
 
 
