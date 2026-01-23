@@ -138,17 +138,40 @@ def get_or_create_user(telegram_id: str, telegram_username: str = None, first_na
     return user
 
 
+def check_registration(update) -> bool:
+    """
+    Проверяет, зарегистрирован ли пользователь (есть ли он в БД и заполнены ли имя/фамилия).
+    Возвращает True если всё ок, False если нужно регистрироваться.
+    """
+    chat_id = get_chat_id_from_update(update)
+    try:
+        user = User.objects.get(telegram_id=chat_id)
+        if not user.first_name or not user.last_name:
+            text = "⚠️ Пожалуйста, завершите регистрацию, введя свои данные.\nЕсли регистрация не началась, введите /start"
+            if hasattr(update, 'callback_query') or hasattr(update, 'data'):
+                bot.answer_callback_query(update.id, text, show_alert=True)
+            else:
+                bot.send_message(chat_id, text)
+            return False
+        return True
+    except User.DoesNotExist:
+        text = "⚠️ Вы не зарегистрированы в системе. Пожалуйста, введите /start для начала регистрации."
+        bot.send_message(chat_id, text)
+        return False
+
+
 def check_permissions(user_id: str, task: Task = None, require_creator: bool = False) -> tuple[bool, str]:
     user = get_or_create_user(user_id)
     if user.is_admin:
         return True, ""
     if task is None:
         return True, ""
+    
     if require_creator:
         if str(task.creator.telegram_id) != str(user_id):
-            return False, "❌ У вас нет прав для этого действия"
+            return False, "❌ У вас нет прав для этого действия (требуются права создателя)"
     else:
-        if str(task.creator.telegram_id) != str(user_id) and str(task.assignee.telegram_id) != str(user_id):
+        if not task.has_access(user):
             return False, "❌ У вас нет доступа к этой задаче"
     return True, ""
 
@@ -165,7 +188,13 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     text += f"📝 Название: {task.title}\n"
     text += f"📊 Статус: {status_text}\n"
     text += f"👤 Создатель: {task.creator.get_full_name()}\n"
-    text += f"👨‍💼 Исполнитель: {task.assignee.get_full_name()}\n"
+    
+    if task.assigned_role:
+        text += f"👥 Роль-исполнитель: {task.assigned_role.name}\n"
+    elif task.assignee:
+        text += f"👨‍💼 Исполнитель: {task.assignee.get_full_name()}\n"
+    else:
+        text += f"👨‍💼 Исполнитель: Не назначен\n"
 
     if task.description:
         text += f"📖 Описание: {task.description}\n"

@@ -1,5 +1,5 @@
 from bot.handlers.utils import (
-    get_or_create_user, get_user_state, set_user_state, clear_user_state
+    get_or_create_user, get_user_state, set_user_state, clear_user_state, check_registration
 )
 from bot import bot, logger
 from bot.models import User
@@ -43,6 +43,8 @@ def show_profile(chat_id: str, message_id: int = None) -> None:
 
 def profile_callback(call: CallbackQuery) -> None:
     """Обработчик callback для профиля"""
+    if not check_registration(call):
+        return
     chat_id = str(call.message.chat.id)
     show_profile(chat_id, call.message.message_id)
     bot.answer_callback_query(call.id)

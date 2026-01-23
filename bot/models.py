@@ -1,6 +1,34 @@
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+
+
+class Role(models.Model):
+    """Модель роли для группировки пользователей"""
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='Название роли'
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Описание роли'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name = 'Роль'
+        verbose_name_plural = 'Роли'
+        ordering = ['name']
+
+
 class User(models.Model):
     telegram_id = models.CharField(
         primary_key=True,
@@ -41,6 +69,12 @@ class User(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата регистрации'
+    )
+    roles = models.ManyToManyField(
+        Role,
+        blank=True,
+        related_name='users',
+        verbose_name='Роли'
     )
     
     def get_full_name(self):
@@ -93,7 +127,19 @@ class Task(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='assigned_tasks',
-        verbose_name='Исполнитель'
+        verbose_name='Исполнитель',
+        blank=True,
+        null=True,
+        help_text='Конкретный исполнитель задачи'
+    )
+    assigned_role = models.ForeignKey(
+        Role,
+        on_delete=models.CASCADE,
+        related_name='assigned_tasks',
+        verbose_name='Назначено роли',
+        blank=True,
+        null=True,
+        help_text='Роль, которой назначена задача (все пользователи с этой ролью имеют доступ)'
     )
     status = models.CharField(
         max_length=20,
@@ -149,11 +195,17 @@ class Task(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_status_display()})"
     def clean(self):
-        if self.creator == self.assignee and self.status == 'active':
-            pass
-        elif self.creator != self.assignee and self.status == 'pending_review':
-            if not self.report_text:
-                raise ValidationError('Для задач в статусе "Ожидает подтверждения" требуется текст отчета')
+        # Проверяем, что задача назначена либо пользователю, либо роли, но не обоим сразу
+        if self.assignee and self.assigned_role:
+            raise ValidationError('Задача не может быть назначена одновременно пользователю и роли')
+        if not self.assignee and not self.assigned_role:
+            raise ValidationError('Задача должна быть назначена либо пользователю, либо роли')
+        
+        # Проверка для задач в статусе "Ожидает подтверждения"
+        if self.status == 'pending_review':
+            if self.assignee and self.creator != self.assignee:
+                if not self.report_text:
+                    raise ValidationError('Для задач в статусе "Ожидает подтверждения" требуется текст отчета')
     def save(self, *args, **kwargs):
         if self.status == 'completed' and not self.closed_at:
             self.closed_at = timezone.now()
@@ -176,6 +228,29 @@ class Task(models.Model):
         else:
             self.progress = None
         self.save()
+    
+    def get_assignees(self):
+        """Возвращает список всех пользователей, которые имеют доступ к задаче"""
+        if self.assignee:
+            # Задача назначена конкретному пользователю
+            return [self.assignee]
+        elif self.assigned_role:
+            # Задача назначена роли - возвращаем всех пользователей с этой ролью
+            return list(self.assigned_role.users.all())
+        return []
+    
+    def has_access(self, user):
+        """Проверяет, имеет ли пользователь доступ к задаче"""
+        # Создатель всегда имеет доступ
+        if self.creator == user:
+            return True
+        # Если задача назначена конкретному пользователю
+        if self.assignee and self.assignee == user:
+            return True
+        # Если задача назначена роли, проверяем наличие роли у пользователя
+        if self.assigned_role and user.roles.filter(id=self.assigned_role.id).exists():
+            return True
+        return False
     class Meta:
         verbose_name = 'Задача'
         verbose_name_plural = 'Задачи'

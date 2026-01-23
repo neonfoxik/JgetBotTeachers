@@ -1,5 +1,6 @@
 from bot.handlers.utils import (
-    get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info, check_permissions, show_task_progress
+    get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info, 
+    check_permissions, show_task_progress, check_registration
 )
 from bot import bot, logger
 from bot.models import User, Task
@@ -80,14 +81,17 @@ def tasks_callback(call: CallbackQuery) -> None:
 
 
 def tasks_command_logic(update) -> None:
+    if not check_registration(update):
+        return
     chat_id = get_chat_id_from_update(update)
     user = get_or_create_user(chat_id)
 
-    # Получаем активные задачи пользователя
+    # Получаем активные задачи пользователя (назначенные лично или через роль)
+    from django.db.models import Q
     active_tasks = Task.objects.filter(
-        assignee=user,
+        Q(assignee=user) | Q(assigned_role__in=user.roles.all()),
         status__in=['active', 'pending_review']
-    ).order_by('-created_at')
+    ).distinct().order_by('-created_at')
 
     if not active_tasks:
         text = "📋 У вас нет активных задач"
@@ -112,6 +116,8 @@ def tasks_command_logic(update) -> None:
 
 
 def close_task_command(message: Message) -> None:
+    if not check_registration(message):
+        return
     try:
         parts = message.text.split()
         if len(parts) != 2:
@@ -139,6 +145,8 @@ def close_task_command(message: Message) -> None:
 
 
 def task_progress_command(message: Message) -> None:
+    if not check_registration(message):
+        return
     try:
         parts = message.text.split()
         if len(parts) != 2:
@@ -156,7 +164,13 @@ def task_progress_command(message: Message) -> None:
             return
 
         is_creator = task.creator.telegram_id == user.telegram_id
-        is_assignee = task.assignee.telegram_id == user.telegram_id
+        # Исполнителем считается тот, кто имеет доступ (назначен лично или через роль)
+        is_assignee = task.has_access(user) and not is_creator
+        # Если и создатель и исполнитель в одном лице (сам себе назначил через роль), 
+        # то для UI приоритетнее статус исполнителя для кнопок действий
+        if task.has_access(user) and is_creator:
+             is_assignee = True
+
         show_task_progress(chat_id, task, is_creator, is_assignee)
 
     except (ValueError, ObjectDoesNotExist):
@@ -164,6 +178,8 @@ def task_progress_command(message: Message) -> None:
 
 
 def debug_command(message: Message) -> None:
+    if not check_registration(message):
+        return
     chat_id = str(message.chat.id)
     user = get_or_create_user(chat_id)
 

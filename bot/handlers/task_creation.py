@@ -15,16 +15,17 @@ from django.utils import timezone
 
 
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
-    """Показывает меню выбора исполнителя с тремя кнопками: Я сам, Выбрать пользователя, Отмена"""
+    """Показывает меню выбора исполнителя с кнопками: Я сам, Выбрать пользователя, Назначить роли, Отмена"""
     text = "👤 **ШАГ 6: ИСПОЛНИТЕЛЬ**\n\n"
     if user_state.get('is_tutorial'):
-        text += "Теперь нужно выбрать, КТО будет выполнять задачу. Ты можешь назначить её **себе** или любому другому пользователю бота.\n\n_Нажми 'Я сам', чтобы продолжить обучение._"
+        text += "Теперь нужно выбрать, КТО будет выполнять задачу. Ты можешь назначить её **себе**, любому другому пользователю или **группе пользователей с определенной ролью**.\n\n_Нажми 'Я сам', чтобы продолжить обучение._"
     else:
         text += f"Выберите исполнителя для задачи '{user_state.get('title', '')}':"
 
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("👤 Я сам", callback_data="assign_to_me"))
     markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
+    markup.add(InlineKeyboardButton("👥 Назначить роли", callback_data="choose_role_from_list"))
     if not user_state.get('is_tutorial'):
         markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
 
@@ -86,11 +87,24 @@ def show_user_selection_list(chat_id: str, user_state: dict, call: CallbackQuery
 
 def create_task_from_state(chat_id: str, user_state: dict, message_id: int = None) -> tuple[bool, str, InlineKeyboardMarkup]:
     try:
+        from bot.models import Role
         creator = get_or_create_user(chat_id)
+        
+        # Определяем, назначается ли задача пользователю или роли
         assignee_id = user_state.get('assignee_id')
-        if assignee_id:
+        assigned_role_id = user_state.get('assigned_role_id')
+        
+        assignee = None
+        assigned_role = None
+        
+        if assigned_role_id:
+            # Задача назначается роли
+            assigned_role = Role.objects.get(id=assigned_role_id)
+        elif assignee_id:
+            # Задача назначается конкретному пользователю
             assignee = User.objects.get(telegram_id=assignee_id)
         else:
+            # По умолчанию назначаем создателю
             assignee = creator
 
         with transaction.atomic():
@@ -100,6 +114,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
                 description=user_state['description'],
                 creator=creator,
                 assignee=assignee,
+                assigned_role=assigned_role,
                 due_date=due_date_parsed,
                 attachments=user_state.get('attachments', [])
             )
@@ -117,19 +132,36 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             logger.info(f"Задача {task.id} успешно создана и история записана.")
 
             success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
-            # Удаляем Markdown форматирование для имени, так как оно может содержать '_'
-            success_msg += f"👤 Исполнитель: {assignee.user_name} (ID: {assignee.telegram_id})\n"
+            
+            # Информация об исполнителе/роли
+            if assigned_role:
+                users_count = assigned_role.users.count()
+                success_msg += f"👥 Назначено роли: {assigned_role.name} ({users_count} польз.)\n"
+            elif assignee:
+                success_msg += f"👤 Исполнитель: {assignee.user_name} (ID: {assignee.telegram_id})\n"
+            
             if task.due_date:
-                success_msg += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}"
+                success_msg += f"⏰ Срок: {task.due_date.strftime('%d.%m.%Y %H:%M')}\n"
             if subtasks:
-                success_msg += f"📋 Подзадач: {len(subtasks)}"
+                success_msg += f"📋 Подзадач: {len(subtasks)}\n"
             
 
-            # Уведомляем исполнителя, если это не создатель
-            if creator.telegram_id != assignee.telegram_id:
+            # Уведомляем исполнителей
+            if assigned_role:
+                # Уведомляем всех пользователей с этой ролью
+                assignees = assigned_role.users.all()
+                for user in assignees:
+                    if user.telegram_id != creator.telegram_id:
+                        try:
+                            notification_text = f"📋 **Вам назначена новая задача (роль: {assigned_role.name})**\n\n{format_task_info(task)}"
+                            markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+                            safe_edit_or_send_message(user.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+                        except Exception as e:
+                            logger.error(f"Не удалось уведомить пользователя {user.telegram_id} о новой задаче: {e}")
+            elif assignee and creator.telegram_id != assignee.telegram_id:
+                # Уведомляем конкретного исполнителя, если это не создатель
                 try:
                     notification_text = f"📋 **Вам назначена новая задача**\n\n{format_task_info(task)}"
-                    # Добавляем клавиатуру действий для исполнителя
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
                     safe_edit_or_send_message(assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
                 except Exception as e:

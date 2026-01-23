@@ -24,7 +24,8 @@ from bot.handlers import (
     add_subtasks_callback, reopen_task_callback,
     start_tutorial_callback, skip_tutorial_callback,
     handle_registration_input, handle_profile_input,
-    profile_callback, profile_edit_first_name_callback, profile_edit_last_name_callback
+    profile_callback, profile_edit_first_name_callback, profile_edit_last_name_callback,
+    choose_role_from_list_callback, select_role_callback
 )
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
@@ -172,6 +173,10 @@ back_to_assignee_type_handler = bot.callback_query_handler(func=lambda c: c.data
 cancel_task_creation_handler = bot.callback_query_handler(func=lambda c: c.data == "cancel_task_creation")(cancel_task_creation_callback)
 clear_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "clear_attachments")(clear_attachments_callback)
 finish_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "finish_attachments")(finish_attachments_callback)
+
+# Callback для ролей
+choose_role_from_list_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_role_from_list")(choose_role_from_list_callback)
+select_role_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("select_role_"))(select_role_callback)
 
 # Callback для календаря
 calendar_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("calendar_"))(process_calendar_callback)

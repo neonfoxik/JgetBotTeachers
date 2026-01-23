@@ -263,15 +263,17 @@ def reopen_task_callback(call: CallbackQuery) -> None:
         text = f"✅ Задача '{task.title}' снова стала активной и доступной для редактирования"
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
-        # Уведомляем исполнителя, если он не создатель
-        if task.creator.telegram_id != task.assignee.telegram_id:
-            try:
-                bot.send_message(
-                    task.assignee.telegram_id,
-                    f"🔄 Задача снова активна\n\n{format_task_info(task)}\n\nЗадача была reopened создателем."
-                )
-            except Exception as e:
-                logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")
+        # Уведомляем всех исполнителей, если инициатор не единственный исполнитель
+        assignees = task.get_assignees()
+        for assignee in assignees:
+            if assignee.telegram_id != chat_id:
+                try:
+                    bot.send_message(
+                        assignee.telegram_id,
+                        f"🔄 Задача снова активна\n\n{format_task_info(task)}\n\nЗадача была возобновлена."
+                    )
+                except Exception as e:
+                    logger.error(f"Не удалось уведомить исполнителя {assignee.user_name} задачи {task_id}: {e}")
 
         # Подтверждаем callback
         bot.answer_callback_query(call.id)

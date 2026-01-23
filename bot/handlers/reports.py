@@ -164,7 +164,7 @@ def notify_creator_about_comment(task: Task, comment: TaskComment) -> None:
 
 def notify_assignee_about_comment(task: Task, comment: TaskComment) -> None:
     """
-    Уведомляет исполнителя задачи о новом комментарии
+    Уведомляет исполнителя (или всех участников роли) задачи о новом комментарии
     """
     try:
         notification_text = f"💬 **Новый комментарий к задаче**\n\n"
@@ -174,10 +174,17 @@ def notify_assignee_about_comment(task: Task, comment: TaskComment) -> None:
 
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments, 
                                         False, True)
-        bot.send_message(task.assignee.telegram_id, notification_text, 
-                        reply_markup=markup, parse_mode='Markdown')
+        
+        assignees = task.get_assignees()
+        for assignee in assignees:
+            if assignee.telegram_id != str(comment.author.telegram_id):
+                try:
+                    bot.send_message(assignee.telegram_id, notification_text, 
+                                    reply_markup=markup, parse_mode='Markdown')
+                except Exception as e:
+                    logger.error(f"Не удалось уведомить участника {assignee.telegram_id} о комментарии: {e}")
     except Exception as e:
-        logger.error(f"Не удалось уведомить исполнителя о комментарии: {e}")
+        logger.error(f"Не удалось отправить уведомления о комментарии: {e}")
 
 
 def initiate_comment(chat_id: str, task_id: int) -> None:
@@ -215,18 +222,18 @@ def handle_task_comment(message: Message) -> None:
         clear_user_state(chat_id)
         
         # Уведомляем о комментарии согласно логике
-        if task.creator.telegram_id != task.assignee.telegram_id:
-            if user.telegram_id == task.creator.telegram_id:
-                # Если оставил создатель - уведомляем исполнителя
-                notify_assignee_about_comment(task, comment)
-            elif user.telegram_id == task.assignee.telegram_id:
-                # Если оставил исполнитель - уведомляем создателя
-                notify_creator_about_comment(task, comment)
+        is_user_creator = (user.telegram_id == task.creator.telegram_id)
+        is_user_assignee = task.has_access(user)
+        
+        if is_user_creator:
+            # Если оставил создатель - уведомляем всех исполнителей
+            notify_assignee_about_comment(task, comment)
+        elif is_user_assignee:
+            # Если оставил любой из исполнителей - уведомляем создателя
+            notify_creator_about_comment(task, comment)
         
         # Показываем задачу снова
-        is_creator = task.creator.telegram_id == user.telegram_id
-        is_assignee = task.assignee.telegram_id == user.telegram_id
-        show_task_progress(chat_id, task, is_creator, is_assignee)
+        show_task_progress(chat_id, task, is_user_creator, is_user_assignee)
         
     except Exception as e:
         logger.error(f"Error adding comment: {e}")

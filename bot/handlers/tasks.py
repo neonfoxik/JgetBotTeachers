@@ -9,7 +9,8 @@ from bot.keyboards import (
 )
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, get_user_state,
-    set_user_state, clear_user_state, check_permissions, format_task_info, show_task_progress
+    set_user_state, clear_user_state, check_permissions, format_task_info, show_task_progress,
+    check_registration
 )
 from telebot.types import (
     Message,
@@ -105,6 +106,8 @@ def my_created_tasks_command_logic(update) -> None:
         # Если это команда, отправляем новое сообщение
         safe_edit_or_send_message(chat_id, text, reply_markup=markup)
 def create_task_command_logic(update) -> None:
+    if not check_registration(update):
+        return
     chat_id = get_chat_id_from_update(update)
     logger.info(f"Начало создания задачи для пользователя {chat_id}")
     

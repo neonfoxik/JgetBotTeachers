@@ -49,7 +49,8 @@ def task_view_callback(call: CallbackQuery) -> None:
             return
         user = get_or_create_user(chat_id)
         is_creator = task.creator.telegram_id == user.telegram_id
-        is_assignee = task.assignee.telegram_id == user.telegram_id
+        # Исполнителем считается любой, кто имеет доступ (лично или через роль)
+        is_assignee = task.has_access(user)
         show_task_progress(call.message.chat.id, task, is_creator, is_assignee, call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
@@ -68,7 +69,7 @@ def task_progress_callback(call: CallbackQuery) -> None:
             return
         user = get_or_create_user(chat_id)
         is_creator = task.creator.telegram_id == user.telegram_id
-        is_assignee = task.assignee.telegram_id == user.telegram_id
+        is_assignee = task.has_access(user)
         show_task_progress(chat_id, task, is_creator, is_assignee, call.message.message_id)
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
@@ -156,12 +157,14 @@ def task_confirm_callback(call: CallbackQuery) -> None:
 
         text = f"✅ Задача '{task.title}' подтверждена и завершена!"
 
-        # Уведомляем исполнителя
+        # Уведомляем исполнителей
         try:
             assignee_notification = f"🎉 Ваша задача подтверждена!\n\n{format_task_info(task)}"
-            bot.send_message(task.assignee.telegram_id, assignee_notification)
+            for assignee in task.get_assignees():
+                if assignee.telegram_id != chat_id: # Не уведомляем того, кто подтвердил (хотя подтверждает создатель)
+                    bot.send_message(assignee.telegram_id, assignee_notification)
         except Exception as e:
-            logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")
+            logger.error(f"Не удалось уведомить исполнителей задачи {task_id}: {e}")
 
         safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
@@ -190,13 +193,14 @@ def task_reject_callback(call: CallbackQuery) -> None:
 
         text = f"❌ Задача '{task.title}' возвращена на доработку"
 
-        # Уведомляем исполнителя
+        # Уведомляем исполнителей
         try:
             assignee_notification = f"🔄 Ваша задача возвращена на доработку\n\n{format_task_info(task)}\n\n💬 Комментарий: Нужно доработать"
             markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
-            bot.send_message(task.assignee.telegram_id, assignee_notification, reply_markup=markup)
+            for assignee in task.get_assignees():
+                bot.send_message(assignee.telegram_id, assignee_notification, reply_markup=markup)
         except Exception as e:
-            logger.error(f"Не удалось уведомить исполнителя задачи {task_id}: {e}")
+            logger.error(f"Не удалось уведомить исполнителей задачи {task_id}: {e}")
 
         safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
@@ -230,7 +234,7 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
         # Показываем обновленный вид задачи с прогрессом
         user = get_or_create_user(chat_id)
         is_creator = task.creator.telegram_id == user.telegram_id
-        is_assignee = task.assignee.telegram_id == user.telegram_id
+        is_assignee = task.has_access(user)
         show_task_progress(chat_id, task, is_creator, is_assignee, call.message.message_id)
 
         # Показываем уведомление о переключении
@@ -322,7 +326,7 @@ def task_status_callback(call: CallbackQuery) -> None:
 
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
                                        task.creator.telegram_id == chat_id,
-                                       task.assignee.telegram_id == chat_id)
+                                       task.has_access(get_or_create_user(chat_id)))
         safe_edit_or_send_message(call.message.chat.id, status_info, reply_markup=markup, message_id=call.message.message_id)
 
     except (ValueError, ObjectDoesNotExist):
@@ -364,9 +368,9 @@ def task_close_callback(call: CallbackQuery) -> None:
         user = get_or_create_user(chat_id)
         logger.info(f"User: {user.user_name}")
 
-        # Проверяем, что пользователь является исполнителем
-        if task.assignee.telegram_id != user.telegram_id:
-            logger.warning(f"User {user.telegram_id} is not assignee of task {task.id}")
+        # Проверяем, что пользователь является исполнителем (лично или через роль)
+        if not task.has_access(user):
+            logger.warning(f"User {user.telegram_id} has no access to task {task.id}")
             bot.answer_callback_query(call.id, "❌ Только исполнитель может отправить задачу на проверку", show_alert=True)
             return
 

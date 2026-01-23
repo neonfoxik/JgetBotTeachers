@@ -23,6 +23,9 @@ from .task_creation import (
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback
 )
+from .role_handlers import (
+    choose_role_from_list_callback, select_role_callback
+)
 from .task_editing import (
     task_edit_callback, edit_title_callback, edit_description_callback,
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
