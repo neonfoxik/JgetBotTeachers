@@ -4,38 +4,11 @@ from bot.models import Task, User
 from bot import bot, logger
 from bot.handlers.utils import format_task_info
 from bot.keyboards import get_task_actions_markup
-import time
-import os
-import signal
-import sys
 
 class Command(BaseCommand):
-    help = 'Запуск системы периодических напоминаний о задачах'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.running = True
-        signal.signal(signal.SIGINT, self.handle_exit)
-        signal.signal(signal.SIGTERM, self.handle_exit)
-
-    def handle_exit(self, signum, frame):
-        self.stdout.write(self.style.SUCCESS('\n🛑 Останавливаем систему напоминаний...'))
-        self.running = False
-        sys.exit(0)
+    help = 'Проверка и отправка напоминаний о задачах (однократный запуск через крон)'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS('📡 Система напоминаний запущена'))
-        
-        while self.running:
-            try:
-                self.check_reminders()
-            except Exception as e:
-                logger.error(f"Ошибка в цикле напоминаний: {e}")
-            
-            # Спим 60 секунд (каждую минуту) перед следующей проверкой
-            time.sleep(30)
-
-    def check_reminders(self):
         now = timezone.now()
         
         # Ищем незавершенные задачи с установленным интервалом
@@ -77,6 +50,6 @@ class Command(BaseCommand):
                     reply_markup=markup,
                     parse_mode='Markdown'
                 )
-                self.stdout.write(f"✅ Напоминание по задаче {task.id} отправлено {user.user_name}")
+                self.stdout.write(self.style.SUCCESS(f"✅ Напоминание по задаче {task.id} отправлено {user.user_name}"))
             except Exception as e:
                 logger.error(f"Не удалось отправить напоминание пользователю {user.telegram_id}: {e}")
