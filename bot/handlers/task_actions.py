@@ -264,8 +264,8 @@ def task_delete_callback(call: CallbackQuery) -> None:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
         chat_id = get_chat_id_from_update(call)
-        # Удаление могут делать создатель и исполнитель для любой задачи
-        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
+        # Удаление может делать только создатель
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
@@ -296,8 +296,8 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
         task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
         chat_id = get_chat_id_from_update(call)
-        # Удаление могут делать создатель и исполнитель для любой задачи
-        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
+        # Удаление может делать только создатель
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=True)
         if not allowed:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return

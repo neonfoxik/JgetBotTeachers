@@ -29,7 +29,8 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
     # Для завершенных задач показываем кнопки удаления, редактирования и возврата в главное меню
     if task_status == 'completed':
         markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
-        markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
+        if is_creator:
+            markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
         return markup
 
@@ -56,8 +57,8 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
     else:
         markup.add(btn1)
 
-    # Кнопка удаления доступна для всех задач, где пользователь имеет права
-    if is_creator or is_assignee:
+    # Кнопка удаления доступна только создателю
+    if is_creator:
         markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
 
     if report_attachments and len(report_attachments) > 0:
