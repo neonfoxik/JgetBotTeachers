@@ -92,7 +92,7 @@ def get_user_selection_markup(users, page: int = 0, users_per_page: int = 5) -> 
     for user in users_on_page:
         role_emoji = "👑" if user.is_admin else "👨‍🎓"
         markup.add(InlineKeyboardButton(
-            f"{role_emoji} {user.user_name}",
+            f"{role_emoji} {user.get_full_name()}",
             callback_data=f"select_user_{user.telegram_id}"
         ))
     nav_buttons = []
