@@ -131,7 +131,7 @@ def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = Non
     markup.add(InlineKeyboardButton("➕ Добавить подзадачу", callback_data="add_subtask"))
     if subtasks:
         markup.add(InlineKeyboardButton("🗑️ Очистить все подзадачи", callback_data="clear_subtasks"))
-    markup.add(InlineKeyboardButton("✅ Готово", callback_data="finish_subtasks"))
+    markup.add(InlineKeyboardButton("✅ Далее", callback_data="finish_subtasks"))
 
     if not user_state.get('is_tutorial'):
         markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
@@ -579,7 +579,7 @@ def show_attachments_menu(chat_id: str, user_state: dict, call: CallbackQuery = 
     markup = InlineKeyboardMarkup()
     if attachments:
         markup.add(InlineKeyboardButton("🗑️ Очистить список", callback_data="clear_attachments"))
-    markup.add(InlineKeyboardButton("✅ Готово", callback_data="finish_attachments"))
+    markup.add(InlineKeyboardButton("✅ Далее", callback_data="finish_attachments"))
     if not user_state.get('is_tutorial'):
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="cancel_task_creation"))
     
