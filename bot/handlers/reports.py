@@ -1,6 +1,6 @@
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
-    check_permissions, get_user_state, set_user_state, clear_user_state
+    check_permissions, get_user_state, set_user_state, clear_user_state, send_task_notification
 )
 from bot.handlers.main import show_task_progress
 from bot import bot, logger
@@ -65,10 +65,10 @@ def handle_task_report(message: Message) -> None:
             set_user_state(chat_id, user_state)
             
             markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("✅ Завершить и отправить", callback_data="finish_report"))
+            markup.add(InlineKeyboardButton("➡️ Завершить и отправить", callback_data="finish_report"))
             markup.add(InlineKeyboardButton("🗑️ Сбросить вложения", callback_data="clear_report_attachments"))
             
-            status_msg = f"✅ Вложение добавлено (всего: {len(attachments)})."
+            status_msg = f"➡️ Вложение добавлено (всего: {len(attachments)})."
             if report_text:
                 status_msg += f"\n📝 Текст отчета: {report_text[:50]}..."
             
@@ -90,7 +90,7 @@ def handle_task_report(message: Message) -> None:
         notify_creator_about_report(active_task)
 
         clear_user_state(chat_id)
-        bot.send_message(message.chat.id, "✅ Отчет успешно отправлен создателю для проверки", reply_markup=get_main_menu(user))
+        bot.send_message(message.chat.id, "➡️ Отчет успешно отправлен создателю для проверки", reply_markup=get_main_menu(user))
 
     except Exception as e:
         logger.error(f"Ошибка при отправке отчета: {e}")
@@ -123,7 +123,7 @@ def finish_report_callback(call: CallbackQuery) -> None:
         notify_creator_about_report(task)
         
         clear_user_state(chat_id)
-        bot.edit_message_text("✅ Отчет успешно отправлен!", chat_id, call.message.message_id)
+        bot.edit_message_text("➡️ Отчет успешно отправлен!", chat_id, call.message.message_id)
         user = get_or_create_user(chat_id)
         bot.send_message(chat_id, "Вы вернулись в главное меню", reply_markup=get_main_menu(user))
         
@@ -139,7 +139,7 @@ def notify_creator_about_report(task: Task) -> None:
             creator_text += f"📄 Отчет исполнителя:\n{task.report_text}\n"
 
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments, True, False)
-        bot.send_message(task.creator.telegram_id, creator_text, reply_markup=markup, parse_mode='Markdown')
+        send_task_notification(task.creator.telegram_id, creator_text, reply_markup=markup, parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Не удалось уведомить создателя: {e}")
 
@@ -156,7 +156,7 @@ def notify_creator_about_comment(task: Task, comment: TaskComment) -> None:
 
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments, 
                                         True, False)
-        bot.send_message(task.creator.telegram_id, notification_text, 
+        send_task_notification(task.creator.telegram_id, notification_text, 
                         reply_markup=markup, parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Не удалось уведомить создателя о комментарии: {e}")
@@ -179,7 +179,7 @@ def notify_assignee_about_comment(task: Task, comment: TaskComment) -> None:
         for assignee in assignees:
             if assignee.telegram_id != str(comment.author.telegram_id):
                 try:
-                    bot.send_message(assignee.telegram_id, notification_text, 
+                    send_task_notification(assignee.telegram_id, notification_text, 
                                     reply_markup=markup, parse_mode='Markdown')
                 except Exception as e:
                     logger.error(f"Не удалось уведомить участника {assignee.telegram_id} о комментарии: {e}")
@@ -218,7 +218,7 @@ def handle_task_comment(message: Message) -> None:
             text=message.text.strip()
         )
         
-        bot.send_message(chat_id, "✅ Комментарий добавлен!")
+        bot.send_message(chat_id, "➡️ Комментарий добавлен!")
         clear_user_state(chat_id)
         
         # Уведомляем о комментарии согласно логике

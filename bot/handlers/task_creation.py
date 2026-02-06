@@ -1,6 +1,7 @@
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, get_user_state,
-    set_user_state, clear_user_state, check_permissions, format_task_info, parse_datetime_from_state
+    set_user_state, clear_user_state, check_permissions, format_task_info, parse_datetime_from_state,
+    send_task_notification
 )
 from bot import bot, logger
 from bot.models import User, Task, Subtask
@@ -123,7 +124,7 @@ def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = Non
         text += "\n"
     else:
         if user_state.get('is_tutorial'):
-            text += "_Подзадачи пока не добавлены. Попробуй добавить одну или нажми 'Готово'._\n\n"
+            text += "_Подзадачи пока не добавлены. Попробуй добавить одну или нажми 'Далее'._\n\n"
         else:
             text += "Подзадачи пока не добавлены.\n\n"
 
@@ -131,7 +132,7 @@ def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = Non
     markup.add(InlineKeyboardButton("➕ Добавить подзадачу", callback_data="add_subtask"))
     if subtasks:
         markup.add(InlineKeyboardButton("🗑️ Очистить все подзадачи", callback_data="clear_subtasks"))
-    markup.add(InlineKeyboardButton("✅ Далее", callback_data="finish_subtasks"))
+    markup.add(InlineKeyboardButton("➡️ Далее", callback_data="finish_subtasks"))
 
     if not user_state.get('is_tutorial'):
         markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
@@ -203,7 +204,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             log_task_history(task, creator, "Задача создана")
             logger.info(f"Задача {task.id} успешно создана и история записана.")
 
-            success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
+            success_msg = f"➡️ Задача '{task.title}' успешно создана!\n\n"
             
             # Информация об исполнителе/роли
             if assigned_role:
@@ -227,7 +228,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
                         try:
                             notification_text = f"📋 **Вам назначена новая задача (роль: {assigned_role.name})**\n\n{format_task_info(task)}"
                             markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
-                            safe_edit_or_send_message(user.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+                            send_task_notification(user.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
                         except Exception as e:
                             logger.error(f"Не удалось уведомить пользователя {user.telegram_id} о новой задаче: {e}")
             elif assignee and creator.telegram_id != assignee.telegram_id:
@@ -235,7 +236,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
                 try:
                     notification_text = f"📋 **Вам назначена новая задача**\n\n{format_task_info(task)}"
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
-                    safe_edit_or_send_message(assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+                    send_task_notification(assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
                 except Exception as e:
                     logger.error(f"Не удалось уведомить исполнителя {assignee.telegram_id} о новой задаче: {e}")
 
@@ -312,7 +313,7 @@ def handle_task_creation_messages(message: Message) -> None:
                 # Обновляем прогресс задачи
                 task.update_progress()
 
-                text = f"✅ Добавлено {created_count} подзадач к задаче '{task.title}'"
+                text = f"➡️ Добавлено {created_count} подзадач к задаче '{task.title}'"
                 bot.send_message(message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP)
 
             except Task.DoesNotExist:
@@ -336,11 +337,11 @@ def handle_task_creation_messages(message: Message) -> None:
                         return
                     task.title = message.text.strip()
                     task.save()
-                    bot.send_message(message.chat.id, f"✅ Название задачи #{task_id} изменено")
+                    bot.send_message(message.chat.id, f"➡️ Название задачи #{task_id} изменено")
                 elif field == 'description':
                     task.description = message.text.strip()
                     task.save()
-                    bot.send_message(message.chat.id, f"✅ Описание задачи #{task_id} изменено")
+                    bot.send_message(message.chat.id, f"➡️ Описание задачи #{task_id} изменено")
                 
                 # Очищаем состояние
                 clear_user_state(chat_id)
@@ -435,7 +436,7 @@ def handle_task_creation_messages(message: Message) -> None:
                     else:
                         user_state['description'] = message.caption
                 
-                bot.send_message(message.chat.id, "✅ Фото добавлено. Вы можете прикрепить еще или нажать 'Готово'.")
+                bot.send_message(message.chat.id, "➡️ Фото добавлено. Вы можете прикрепить еще или нажать 'Далее'.")
             elif message.document:
                 attachments.append({
                     'type': 'document',
@@ -452,7 +453,7 @@ def handle_task_creation_messages(message: Message) -> None:
                         
                 bot.send_message(message.chat.id, "✅ Файл добавлен. Вы можете прикрепить еще или нажать 'Готово'.")
             else:
-                bot.send_message(message.chat.id, "❌ Пожалуйста, отправьте фото или файл, либо нажмите 'Готово'.")
+                bot.send_message(message.chat.id, "❌ Пожалуйста, отправьте фото или файл, либо нажмите 'Далее'.")
                 return
 
             user_state['attachments'] = attachments
@@ -574,12 +575,12 @@ def show_attachments_menu(chat_id: str, user_state: dict, call: CallbackQuery = 
     if attachments:
         text += f"✅ **Уже добавлено: {len(attachments)}**\n\n"
     
-    text += "_Нажми 'Готово', когда закончишь, или если вложения не нужны._"
+    text += "_Нажми 'Далее', когда закончишь, или если вложения не нужны._"
     
     markup = InlineKeyboardMarkup()
     if attachments:
         markup.add(InlineKeyboardButton("🗑️ Очистить список", callback_data="clear_attachments"))
-    markup.add(InlineKeyboardButton("✅ Далее", callback_data="finish_attachments"))
+    markup.add(InlineKeyboardButton("➡️ Далее", callback_data="finish_attachments"))
     if not user_state.get('is_tutorial'):
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="cancel_task_creation"))
     
@@ -670,7 +671,7 @@ def select_user_callback(call: CallbackQuery) -> None:
                 try:
                     notification_text = f"📋 **Вам назначена задача**\n\n{format_task_info(task)}"
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
-                    safe_edit_or_send_message(new_assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
+                    send_task_notification(new_assignee.telegram_id, notification_text, reply_markup=markup, parse_mode='Markdown')
                 except Exception as e:
                     logger.error(f"Не удалось уведомить исполнителя {new_assignee.telegram_id}: {e}")
                 

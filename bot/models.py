@@ -77,6 +77,15 @@ class User(models.Model):
         verbose_name='Роли'
     )
     
+    work_start = models.PositiveIntegerField(
+        default=7,
+        verbose_name='Начало рабочего времени (час)'
+    )
+    work_end = models.PositiveIntegerField(
+        default=21,
+        verbose_name='Конец рабочего времени (час)'
+    )
+    
     def get_full_name(self):
         """Возвращает полное имя пользователя"""
         if self.first_name and self.last_name:
@@ -93,6 +102,25 @@ class User(models.Model):
             return self.user_name
         return f"ID {self.telegram_id}"
     
+    def is_working_time(self):
+        """Проверяет, входит ли текущее время в рабочий интервал пользователя"""
+        import pytz
+        from datetime import datetime
+        try:
+            tz = pytz.timezone(self.timezone)
+        except:
+            tz = pytz.UTC
+            
+        now = datetime.now(tz)
+        current_hour = now.hour
+        
+        # Обработка случая, когда конец работы на следующий день (например, с 22 до 02)
+        if self.work_start < self.work_end:
+            return self.work_start <= current_hour < self.work_end
+        else:
+            # Например, с 22 до 06
+            return current_hour >= self.work_start or current_hour < self.work_end
+
     def __str__(self):
         return f"{self.get_full_name()} ({'Админ' if self.is_admin else 'Учитель'})"
     
@@ -291,7 +319,7 @@ class Subtask(models.Model):
         verbose_name='Дата выполнения'
     )
     def __str__(self):
-        status = "✅" if self.is_completed else "⏳"
+        status = "➡️" if self.is_completed else "⏳"
         return f"{status} {self.title}"
     def save(self, *args, **kwargs):
         if self.is_completed and not self.completed_at:

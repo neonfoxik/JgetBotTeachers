@@ -167,7 +167,7 @@ def initiate_task_close(chat_id: str, task: Task, message_id: int = None) -> Non
             except Exception as e:
                 print(f"Warning: Failed to unschedule reminder for task {task.id}: {e}")
 
-            text = f"✅ Задача закрыта\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!"
+            text = f"➡️ Задача закрыта\n\n{format_task_info(task)}\n\nЗадача успешно закрыта!"
             user = get_or_create_user(chat_id)
             safe_edit_or_send_message(chat_id, text, reply_markup=get_main_menu(user), message_id=message_id)
         else:

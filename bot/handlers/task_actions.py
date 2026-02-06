@@ -1,6 +1,6 @@
 from bot.handlers.utils import (
     get_or_create_user, get_chat_id_from_update, safe_edit_or_send_message, format_task_info,
-    check_permissions, show_task_progress, check_registration
+    check_permissions, show_task_progress, check_registration, send_task_notification
 )
 from bot.models import Task
 
@@ -109,7 +109,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
             task.status = 'completed'
             task.closed_at = timezone.now()
             task.save()
-            text = f"✅ Задача '{task.title}' отмечена как выполненная!"
+            text = f"➡️ Задача '{task.title}' отмечена как выполненная!"
         else:
             # Если исполнитель отправляет на проверку
             task.status = 'pending_review'
@@ -120,7 +120,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
             try:
                 creator_notification = f"📬 Ваша задача готова к проверке\n\n{format_task_info(task)}"
                 markup = get_task_actions_markup(task.id, task.status, task.report_attachments, True, False)
-                bot.send_message(task.creator.telegram_id, creator_notification, reply_markup=markup)
+                send_task_notification(task.creator.telegram_id, creator_notification, reply_markup=markup)
             except Exception as e:
                 logger.error(f"Не удалось уведомить создателя задачи {task_id}: {e}")
 
@@ -163,14 +163,14 @@ def task_confirm_callback(call: CallbackQuery) -> None:
         user = User.objects.get(telegram_id=chat_id)
         log_task_history(task, user, "Выполнение подтверждено создателем")
 
-        text = f"✅ Задача '{task.title}' подтверждена и завершена!"
+        text = f"➡️ Задача '{task.title}' подтверждена и завершена!"
 
         # Уведомляем исполнителей
         try:
             assignee_notification = f"🎉 Ваша задача подтверждена!\n\n{format_task_info(task)}"
             for assignee in task.get_assignees():
                 if assignee.telegram_id != chat_id: # Не уведомляем того, кто подтвердил (хотя подтверждает создатель)
-                    bot.send_message(assignee.telegram_id, assignee_notification)
+                    send_task_notification(assignee.telegram_id, assignee_notification)
         except Exception as e:
             logger.error(f"Не удалось уведомить исполнителей задачи {task_id}: {e}")
 
@@ -208,7 +208,7 @@ def task_reject_callback(call: CallbackQuery) -> None:
             assignee_notification = f"🔄 Ваша задача возвращена на доработку\n\n{format_task_info(task)}\n\n💬 Комментарий: Нужно доработать"
             markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
             for assignee in task.get_assignees():
-                bot.send_message(assignee.telegram_id, assignee_notification, reply_markup=markup)
+                send_task_notification(assignee.telegram_id, assignee_notification, reply_markup=markup)
         except Exception as e:
             logger.error(f"Не удалось уведомить исполнителей задачи {task_id}: {e}")
 
@@ -251,7 +251,7 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
 
         # Показываем уведомление о переключении
         status_text = "выполнена" if subtask.is_completed else "не выполнена"
-        bot.answer_callback_query(call.id, f"✅ Подзадача отмечена как {status_text}", show_alert=False)
+        bot.answer_callback_query(call.id, f"➡️ Подзадача отмечена как {status_text}", show_alert=False)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Подзадача не найдена", show_alert=True)
@@ -273,7 +273,7 @@ def task_delete_callback(call: CallbackQuery) -> None:
         text = f"🗑️ УДАЛЕНИЕ ЗАДАЧИ\n\nВы действительно хотите удалить задачу '{task.title}'?\n\n⚠️ Это действие нельзя отменить!"
         markup = InlineKeyboardMarkup()
         markup.add(
-            InlineKeyboardButton("✅ Да, удалить", callback_data=f"confirm_delete_{task_id}"),
+            InlineKeyboardButton("➡️ Да, удалить", callback_data=f"confirm_delete_{task_id}"),
             InlineKeyboardButton("❌ Отмена", callback_data=f"task_progress_{task_id}")
         )
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
@@ -305,7 +305,7 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
         task_title = task.title
         try:
             task.delete()
-            text = f"✅ Задача '{task_title}' успешно удалена из базы данных"
+            text = f"➡️ Задача '{task_title}' успешно удалена из базы данных"
             safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
             # Подтверждаем callback
@@ -418,7 +418,7 @@ def task_close_callback(call: CallbackQuery) -> None:
 
         # Отвечаем на callback
         logger.info("Answering callback query with success")
-        bot.answer_callback_query(call.id, "✅ Задача отправлена на проверку", show_alert=False)
+        bot.answer_callback_query(call.id, "➡️ Задача отправлена на проверку", show_alert=False)
         logger.info("=== TASK_CLOSE_CALLBACK COMPLETED ===")
 
     except ValueError as e:

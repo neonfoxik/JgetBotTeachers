@@ -253,7 +253,7 @@ def process_calendar_callback(call) -> None:
                     task = Task.objects.get(id=int(task_id))
                     task.due_date = due_date
                     task.save()
-                    text = f"✅ Срок задачи обновлен: {due_date.strftime('%d.%m.%Y %H:%M')}"
+                    text = f"➡️ Срок задачи обновлен: {due_date.strftime('%d.%m.%Y %H:%M')}"
                     from bot.keyboards import get_task_actions_markup
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
                                                    task.creator.telegram_id == chat_id,
@@ -299,7 +299,7 @@ def process_calendar_callback(call) -> None:
                     task = Task.objects.get(id=int(task_id))
                     task.due_date = due_date
                     task.save()
-                    text = f"✅ Срок задачи обновлен: {due_date.strftime('%d.%m.%Y')} (без времени)"
+                    text = f"➡️ Срок задачи обновлен: {due_date.strftime('%d.%m.%Y')} (без времени)"
                     from bot.keyboards import get_task_actions_markup
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
                                                    task.creator.telegram_id == chat_id,
@@ -334,7 +334,7 @@ def process_calendar_callback(call) -> None:
                     task = Task.objects.get(id=int(task_id))
                     task.due_date = None
                     task.save()
-                    text = "✅ Срок задачи снят"
+                    text = "➡️ Срок задачи снят"
                     from bot.keyboards import get_task_actions_markup
                     markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
                                                    task.creator.telegram_id == chat_id,

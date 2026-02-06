@@ -52,6 +52,28 @@ def safe_edit_or_send_message(chat_id: str, text: str, reply_markup=None, messag
             logger.error(f"Ultimate failure sending message to {chat_id}: {send_e}")
 
 
+def send_task_notification(user_id: str, text: str, reply_markup=None, parse_mode='Markdown') -> bool:
+    """
+    Отправляет уведомление пользователю с учетом его рабочих часов.
+    Возвращает True если сообщение отправлено, False если пропущено (не рабочее время).
+    """
+    try:
+        user = User.objects.get(telegram_id=user_id)
+        if not user.is_working_time():
+            logger.info(f"Skipping notification to {user_id} - outside working hours ({user.work_start}-{user.work_end})")
+            return False
+            
+        bot.send_message(user_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
+        return True
+    except User.DoesNotExist:
+        # Если пользователя нет в базе (странно, но бывает), отправляем все равно
+        bot.send_message(user_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
+        return True
+    except Exception as e:
+        logger.error(f"Error sending task notification to {user_id}: {e}")
+        return False
+
+
 def get_user_state(chat_id) -> dict:
     try:
         user_state = UserState.objects.get(user__telegram_id=chat_id)
@@ -214,7 +236,7 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     status_text = {
         'active': '🔄 Активная',
         'pending_review': '⏳ Ожидает подтверждения',
-        'completed': '✅ Завершена',
+        'completed': '➡️ Завершена',
         'cancelled': '❌ Отменена'
     }.get(task.status, '❓ Неизвестный статус')
 
@@ -240,7 +262,7 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
         text += f"📎 Вложения: {len(task.attachments)}\n"
 
     if task.status == 'completed' and task.closed_at:
-        text += f"✅ Завершена: {timezone.localtime(task.closed_at).strftime('%d.%m.%Y %H:%M')}\n"
+        text += f"➡️ Завершена: {timezone.localtime(task.closed_at).strftime('%d.%m.%Y %H:%M')}\n"
 
     if task.status == 'pending_review' and task.report_text:
         text += f"\n📄 Отчет исполнителя:\n{task.report_text}\n"
@@ -314,7 +336,7 @@ def show_task_progress(chat_id: str, task: Task, is_creator: bool = False, is_as
 
         # Показываем подзадачи
         for subtask in subtasks:
-            status = "✅" if subtask.is_completed else "⏳"
+            status = "➡️" if subtask.is_completed else "⏳"
             completed_date = f" ({subtask.completed_at.strftime('%d.%m.%Y')})" if subtask.completed_at else ""
             text += f"\n{status} {subtask.title}{completed_date}"
 
@@ -340,7 +362,7 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
     subtasks = task.subtasks.all()
     if subtasks:
         for subtask in subtasks:
-            status = "✅" if subtask.is_completed else "⏳"
+            status = "➡️" if subtask.is_completed else "⏳"
             markup.add(InlineKeyboardButton(
                 f"{status} {subtask.title}",
                 callback_data=f"subtask_toggle_{task.id}_{subtask.id}"
@@ -356,7 +378,7 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
     if is_assignee and task.status in ['active', 'pending_review']:
         if task.status == 'active':
             if is_creator:
-                btn_action = InlineKeyboardButton("✅ Отметить выполненной", callback_data=f"task_complete_{task.id}")
+                btn_action = InlineKeyboardButton("➡️ Отметить выполненной", callback_data=f"task_complete_{task.id}")
             else:
                 btn_action = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task.id}")
         else:
@@ -367,7 +389,7 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
     markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task.id}"))
 
     if is_creator and task.status == 'pending_review':
-        markup.add(InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task.id}"))
+        markup.add(InlineKeyboardButton("➡️ Подтвердить", callback_data=f"task_confirm_{task.id}"))
         markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task.id}"))
 
     # Кнопка удаления

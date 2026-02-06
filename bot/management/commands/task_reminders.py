@@ -42,14 +42,18 @@ class Command(BaseCommand):
         reminder_text = f"💡 **НАПОМИНАНИЕ О ЗАДАЧЕ**\n\n{format_task_info(task)}"
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
         
+        from bot.handlers.utils import send_task_notification
         for user in assignees:
             try:
-                bot.send_message(
+                sent = send_task_notification(
                     user.telegram_id,
                     reminder_text,
                     reply_markup=markup,
                     parse_mode='Markdown'
                 )
-                self.stdout.write(self.style.SUCCESS(f"✅ Напоминание по задаче {task.id} отправлено {user.user_name}"))
+                if sent:
+                    self.stdout.write(self.style.SUCCESS(f"➡️ Напоминание по задаче {task.id} отправлено {user.user_name}"))
+                else:
+                    self.stdout.write(self.style.WARNING(f"⏳ Напоминание по задаче {task.id} пропущено (не рабочее время) для {user.user_name}"))
             except Exception as e:
                 logger.error(f"Не удалось отправить напоминание пользователю {user.telegram_id}: {e}")

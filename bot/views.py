@@ -25,7 +25,9 @@ from bot.handlers import (
     add_subtasks_callback, reopen_task_callback,
     start_tutorial_callback, skip_tutorial_callback,
     handle_registration_input, handle_profile_input,
-    profile_callback, profile_edit_first_name_callback, profile_edit_last_name_callback,
+    profile_callback, profile_edit_info_menu_callback,
+    profile_edit_first_name_callback, profile_edit_last_name_callback,
+    profile_edit_work_hours_callback,
     choose_role_from_list_callback, select_role_callback
 )
 from django.conf import settings
@@ -150,7 +152,7 @@ def master_message_handler(message: Message):
         return
     
     # Проверяем состояния редактирования профиля
-    if state in ['waiting_first_name', 'waiting_last_name']:
+    if state in ['waiting_first_name', 'waiting_last_name', 'waiting_work_hours']:
         handle_profile_input(message)
         return
     
@@ -235,5 +237,7 @@ skip_tutorial_handler = bot.callback_query_handler(func=lambda c: c.data == "ski
 
 # Callback для профиля
 profile_handler = bot.callback_query_handler(func=lambda c: c.data == "profile")(profile_callback)
+profile_edit_info_menu_handler = bot.callback_query_handler(func=lambda c: c.data == "profile_edit_info_menu")(profile_edit_info_menu_callback)
 profile_edit_first_name_handler = bot.callback_query_handler(func=lambda c: c.data == "profile_edit_first_name")(profile_edit_first_name_callback)
 profile_edit_last_name_handler = bot.callback_query_handler(func=lambda c: c.data == "profile_edit_last_name")(profile_edit_last_name_callback)
+profile_edit_work_hours_handler = bot.callback_query_handler(func=lambda c: c.data == "profile_edit_work_hours")(profile_edit_work_hours_callback)

@@ -45,6 +45,7 @@ from .calendar import process_calendar_callback
 from .tutorial import start_tutorial_callback, skip_tutorial_callback
 from .registration import handle_registration_input
 from .profile import (
-    profile_callback, profile_edit_first_name_callback, 
-    profile_edit_last_name_callback, handle_profile_input
+    profile_callback, profile_edit_info_menu_callback,
+    profile_edit_first_name_callback, profile_edit_last_name_callback,
+    profile_edit_work_hours_callback, handle_profile_input
 )

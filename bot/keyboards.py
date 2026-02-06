@@ -38,7 +38,7 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
     if is_assignee and task_status in ['active', 'pending_review']:
         if task_status == 'active':
             if is_creator:
-                btn2 = InlineKeyboardButton("✅ Отметить выполненной", callback_data=f"task_complete_{task_id}")
+                btn2 = InlineKeyboardButton("➡️ Отметить выполненной", callback_data=f"task_complete_{task_id}")
             else:
                 btn2 = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task_id}")
         else:
@@ -46,7 +46,7 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
         markup.add(btn1, btn2)
     elif is_creator:
         if task_status == 'pending_review':
-            markup.add(InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task_id}"))
+            markup.add(InlineKeyboardButton("➡️ Подтвердить", callback_data=f"task_confirm_{task_id}"))
             markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task_id}"))
         else:
             markup.add(btn1)
@@ -67,14 +67,14 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
     return markup
 def get_task_confirmation_markup(task_id: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
-    btn1 = InlineKeyboardButton("✅ Подтвердить", callback_data=f"task_confirm_{task_id}")
+    btn1 = InlineKeyboardButton("➡️ Подтвердить", callback_data=f"task_confirm_{task_id}")
     btn2 = InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task_id}")
     markup.add(btn1, btn2)
     return markup
 def get_subtask_toggle_markup(task_id: int, subtasks) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
     for subtask in subtasks:
-        status = "✅" if subtask.is_completed else "⏳"
+        status = "➡️" if subtask.is_completed else "⏳"
         markup.add(InlineKeyboardButton(
             f"{status} {subtask.title}",
             callback_data=f"subtask_toggle_{task_id}_{subtask.id}"
@@ -120,7 +120,7 @@ def get_tasks_list_markup(tasks, is_creator_view: bool = False) -> InlineKeyboar
         status_emoji = {
             'active': '🔄',
             'pending_review': '⏳',
-            'completed': '✅',
+            'completed': '➡️',
             'cancelled': '❌'
         }.get(task.status, '❓')
         btn_text = f"{status_emoji} {task.title}"

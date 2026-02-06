@@ -56,7 +56,7 @@ def handle_registration_first_name(message: Message, chat_id: str, user_state: d
     user_state['state'] = 'registration_waiting_last_name'
     set_user_state(chat_id, user_state)
     
-    bot.send_message(chat_id, "✅ Отлично!\n\n✏️ Теперь введите вашу фамилию:")
+    bot.send_message(chat_id, "➡️ Отлично!\n\n✏️ Теперь введите вашу фамилию:")
 
 
 def handle_registration_last_name(message: Message, chat_id: str, user_state: dict) -> None:
@@ -91,7 +91,7 @@ def show_welcome_menu(chat_id: str, user: User) -> None:
     """Показывает приветственное меню после регистрации"""
     from bot.keyboards import get_main_menu
     
-    welcome_text = f"""✅ Регистрация завершена!
+    welcome_text = f"""➡️ Регистрация завершена!
 
 👋 Привет, {user.get_full_name()}!
 
