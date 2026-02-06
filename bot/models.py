@@ -86,6 +86,12 @@ class User(models.Model):
         verbose_name='Конец рабочего времени (час)'
     )
     
+    last_summary_sent_at = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Дата последней отправки сводки'
+    )
+    
     def get_full_name(self):
         """Возвращает полное имя пользователя"""
         if self.first_name and self.last_name:

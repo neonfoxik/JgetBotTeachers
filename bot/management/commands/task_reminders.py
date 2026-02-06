@@ -39,7 +39,15 @@ class Command(BaseCommand):
         """Отправляет напоминание всем ответственным за задачу"""
         assignees = task.get_assignees()
         
-        reminder_text = f"💡 **НАПОМИНАНИЕ О ЗАДАЧЕ**\n\n{format_task_info(task)}"
+        # Проверяем, наступил ли срок сдачи сегодня
+        deadline_notice = ""
+        if task.due_date:
+            now = timezone.localtime(timezone.now())
+            due_date = timezone.localtime(task.due_date)
+            if now.date() == due_date.date():
+                deadline_notice = "\n⚠️ **СЕГОДНЯ последний срок сдачи задания!**\n"
+
+        reminder_text = f"💡 **НАПОМИНАНИЕ О ЗАДАЧЕ**\n{deadline_notice}\n{format_task_info(task)}"
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
         
         from bot.handlers.utils import send_task_notification

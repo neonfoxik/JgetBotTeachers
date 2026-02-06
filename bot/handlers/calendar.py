@@ -361,29 +361,10 @@ def process_calendar_callback(call) -> None:
         bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
     elif data == "calendar_cancel":
-        # Отмена
-        from bot.handlers.utils import clear_user_state
-        clear_user_state(str(call.message.chat.id))
-
-        if context.startswith("task_editing_"):
-            task_id = context.split("_")[2]
-            from bot.keyboards import get_task_actions_markup
-            from bot.models import Task
-            try:
-                task = Task.objects.get(id=int(task_id))
-                text = "❌ Изменение срока отменено"
-                markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
-                                               task.creator.telegram_id == str(call.message.chat.id),
-                                               task.assignee.telegram_id == str(call.message.chat.id))
-            except:
-                text = "❌ Ошибка при отмене"
-                markup = None
-        else:
-            text = "❌ Создание задачи отменено"
-            from bot.keyboards import TASK_MANAGEMENT_MARKUP
-            markup = TASK_MANAGEMENT_MARKUP
-
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        # Отмена с подтверждением
+        from bot.handlers.task_creation import confirm_cancel_task_callback
+        confirm_cancel_task_callback(call)
+        return
 
     elif data == "calendar_ignore":
         # Игнорируем нажатие на заголовок или неактивные дни

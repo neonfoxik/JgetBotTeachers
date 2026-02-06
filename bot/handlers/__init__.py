@@ -22,7 +22,10 @@ from .task_creation import (
     skip_assignee_callback, choose_assignee_callback,
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback,
-    select_notification_interval_callback, skip_notification_interval_callback
+    select_notification_interval_callback, skip_notification_interval_callback,
+    back_to_calendar_callback, back_to_notifications_callback, 
+    back_to_subtasks_callback, back_to_description_callback,
+    confirm_cancel_task_callback, actually_cancel_task_callback, resume_task_callback
 )
 from .role_handlers import (
     choose_role_from_list_callback, select_role_callback

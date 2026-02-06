@@ -46,7 +46,10 @@ def show_notification_selection_menu(chat_id: str, user_state: dict, call: Callb
     )
     
     if not user_state.get('is_tutorial'):
-        markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
+        markup.add(
+            InlineKeyboardButton("⬅️ Назад", callback_data="back_to_calendar"),
+            InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task")
+        )
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -99,7 +102,10 @@ def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQ
     markup.add(InlineKeyboardButton("👥 Выбрать пользователя", callback_data="choose_user_from_list"))
     markup.add(InlineKeyboardButton("👥 Назначить роли", callback_data="choose_role_from_list"))
     if not user_state.get('is_tutorial'):
-        markup.add(InlineKeyboardButton("❌ Отмена", callback_data="cancel_task_creation"))
+        markup.add(
+            InlineKeyboardButton("⬅️ Назад", callback_data="back_to_notifications"),
+            InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task")
+        )
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -135,7 +141,10 @@ def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = Non
     markup.add(InlineKeyboardButton("➡️ Далее", callback_data="finish_subtasks"))
 
     if not user_state.get('is_tutorial'):
-        markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
+        markup.add(
+            InlineKeyboardButton("⬅️ Назад", callback_data="back_to_description"),
+            InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task")
+        )
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -582,7 +591,10 @@ def show_attachments_menu(chat_id: str, user_state: dict, call: CallbackQuery = 
         markup.add(InlineKeyboardButton("🗑️ Очистить список", callback_data="clear_attachments"))
     markup.add(InlineKeyboardButton("➡️ Далее", callback_data="finish_attachments"))
     if not user_state.get('is_tutorial'):
-        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="cancel_task_creation"))
+        markup.add(
+            InlineKeyboardButton("⬅️ Назад", callback_data="back_to_subtasks"),
+            InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task")
+        )
     
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -718,7 +730,97 @@ def back_to_assignee_type_callback(call: CallbackQuery) -> None:
         show_assignee_selection_menu(chat_id, user_state, call)
 
 
-def cancel_task_creation_callback(call: CallbackQuery) -> None:
-    clear_user_state(str(call.message.chat.id))
+def back_to_calendar_callback(call: CallbackQuery) -> None:
+    """Возврат к календарю"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['state'] = 'waiting_due_date'
+        set_user_state(chat_id, user_state)
+        from bot.handlers.calendar import show_calendar
+        show_calendar(chat_id, "task_creation", call.message.message_id)
+
+def back_to_notifications_callback(call: CallbackQuery) -> None:
+    """Возврат к выбору уведомлений"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        show_notification_selection_menu(chat_id, user_state, call)
+
+def back_to_subtasks_callback(call: CallbackQuery) -> None:
+    """Возврат к подзадачам"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        show_subtasks_menu(chat_id, user_state, call)
+
+def back_to_description_callback(call: CallbackQuery) -> None:
+    """Возврат к описанию (ШАГ 2)"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        user_state['state'] = 'waiting_task_description'
+        set_user_state(chat_id, user_state)
+        text = "📝 **ШАГ 2: ОПИСАНИЕ**\n\nВведите описание задачи или нажмите 'Пропустить':"
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("Пропустить описание", callback_data="skip_description"))
+        markup.add(InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task"))
+        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
+
+def confirm_cancel_task_callback(call: CallbackQuery) -> None:
+    """Запрос подтверждения отмены"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    current_state = user_state.get('state') if user_state else 'unknown'
+    
+    markup = InlineKeyboardMarkup()
+    markup.add(
+        InlineKeyboardButton("✅ Да, отменить", callback_data="actually_cancel_task"),
+        InlineKeyboardButton("⬅️ Нет, продолжить", callback_data=f"resume_task_{current_state}")
+    )
+    
+    text = "⚠️ **ВЫ УВЕРЕНЫ?**\n\nВсе введенные данные будут потеряны. Вы действительно хотите отменить создание задачи?"
+    safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
+
+def actually_cancel_task_callback(call: CallbackQuery) -> None:
+    """Окончательная отмена"""
+    chat_id = get_chat_id_from_update(call)
+    clear_user_state(chat_id)
     text = "❌ Создание задачи отменено"
-    safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id, parse_mode='Markdown')
+    safe_edit_or_send_message(chat_id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id, parse_mode='Markdown')
+
+def resume_task_callback(call: CallbackQuery) -> None:
+    """Возврат к созданию задачи после нажатия 'Нет' в подтверждении отмены"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if not user_state:
+        # Если вдруг состояние потерялось, возвращаем в меню
+        bot.edit_message_text("❌ Ошибка: сессия истекла", chat_id, call.message.message_id, reply_markup=TASK_MANAGEMENT_MARKUP)
+        return
+        
+    state = call.data.split('_')[2]
+    
+    if state == 'waiting_task_title':
+        # Не должно быть кнопки отмены здесь, но на всякий случай
+        from bot.handlers.tasks import create_task_command_logic
+        create_task_command_logic(call)
+    elif state == 'waiting_task_description':
+        back_to_description_callback(call)
+    elif state == 'waiting_subtasks' or state == 'waiting_subtask_input':
+        show_subtasks_menu(chat_id, user_state, call)
+    elif state == 'waiting_attachments':
+        show_attachments_menu(chat_id, user_state, call)
+    elif state == 'waiting_due_date':
+        from bot.handlers.calendar import show_calendar
+        show_calendar(chat_id, "task_creation", call.message.message_id)
+    elif state == 'waiting_notification_interval':
+        show_notification_selection_menu(chat_id, user_state, call)
+    elif state == 'waiting_assignee_selection':
+        show_assignee_selection_menu(chat_id, user_state, call)
+    else:
+        # Универсальный возврат в начало шага, если состояние не распознано
+        show_subtasks_menu(chat_id, user_state, call)
+
+def cancel_task_creation_callback(call: CallbackQuery) -> None:
+    # Оставляем для совместимости, но вызываем подтверждение
+    confirm_cancel_task_callback(call)

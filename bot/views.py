@@ -13,6 +13,9 @@ from bot.handlers import (
     user_page_callback, select_user_callback, back_to_assignee_selection_callback,
     back_to_assignee_type_callback, cancel_task_creation_callback,
     select_notification_interval_callback, skip_notification_interval_callback,
+    back_to_calendar_callback, back_to_notifications_callback,
+    back_to_subtasks_callback, back_to_description_callback,
+    confirm_cancel_task_callback, actually_cancel_task_callback, resume_task_callback,
     task_view_callback, task_progress_callback, task_complete_callback,
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
     task_delete_callback, confirm_delete_callback, task_status_callback,
@@ -185,6 +188,17 @@ clear_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == 
 select_notification_interval_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("set_notify_"))(select_notification_interval_callback)
 
 finish_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "finish_attachments")(finish_attachments_callback)
+
+# Callback для навигации при создании задач
+back_to_calendar_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_calendar")(back_to_calendar_callback)
+back_to_notifications_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_notifications")(back_to_notifications_callback)
+back_to_subtasks_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_subtasks")(back_to_subtasks_callback)
+back_to_description_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_description")(back_to_description_callback)
+
+# Callback для отмены создания задач с подтверждением
+confirm_cancel_task_handler = bot.callback_query_handler(func=lambda c: c.data == "confirm_cancel_task")(confirm_cancel_task_callback)
+actually_cancel_task_handler = bot.callback_query_handler(func=lambda c: c.data == "actually_cancel_task")(actually_cancel_task_callback)
+resume_task_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("resume_task_"))(resume_task_callback)
 
 # Callback для ролей
 choose_role_from_list_handler = bot.callback_query_handler(func=lambda c: c.data == "choose_role_from_list")(choose_role_from_list_callback)
