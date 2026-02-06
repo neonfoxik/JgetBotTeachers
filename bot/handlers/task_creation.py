@@ -798,15 +798,16 @@ def resume_task_callback(call: CallbackQuery) -> None:
         bot.edit_message_text("❌ Ошибка: сессия истекла", chat_id, call.message.message_id, reply_markup=TASK_MANAGEMENT_MARKUP)
         return
         
-    state = call.data.split('_')[2]
+    state = call.data.replace('resume_task_', '')
     
     if state == 'waiting_task_title':
-        # Не должно быть кнопки отмены здесь, но на всякий случай
+        # Возврат к началу (ввод названия)
         from bot.handlers.tasks import create_task_command_logic
-        create_task_command_logic(call)
+        # Так как это текстовый ввод, просто вызываем логику команды
+        create_task_command_logic(call.message) 
     elif state == 'waiting_task_description':
         back_to_description_callback(call)
-    elif state == 'waiting_subtasks' or state == 'waiting_subtask_input':
+    elif state in ['waiting_subtasks', 'waiting_subtask_input']:
         show_subtasks_menu(chat_id, user_state, call)
     elif state == 'waiting_attachments':
         show_attachments_menu(chat_id, user_state, call)
@@ -818,7 +819,7 @@ def resume_task_callback(call: CallbackQuery) -> None:
     elif state == 'waiting_assignee_selection':
         show_assignee_selection_menu(chat_id, user_state, call)
     else:
-        # Универсальный возврат в начало шага, если состояние не распознано
+        # Если состояние совсем не распознано или пустое, идем к началу заполнения
         show_subtasks_menu(chat_id, user_state, call)
 
 def back_to_attachments_callback(call: CallbackQuery) -> None:
