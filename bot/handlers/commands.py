@@ -195,7 +195,7 @@ def debug_command(message: Message) -> None:
 📝 Создано задач: {total_created}
 📋 Назначено задач: {total_assigned}
 🔄 Активных задач: {active_tasks}
-➡️ Завершенных задач: {completed_tasks}
+✅ Завершенных задач: {completed_tasks}
 """
 
     bot.send_message(chat_id, debug_info)
