@@ -109,6 +109,27 @@ def skip_notification_interval_callback(call: CallbackQuery) -> None:
     user_state = get_user_state(chat_id)
     if user_state:
         user_state['notification_interval'] = None
+        
+        # Если это редактирование существующей задачи
+        if user_state.get('editing_field') == 'notification_interval' and 'editing_task_id' in user_state:
+            try:
+                task_id = user_state['editing_task_id']
+                task = Task.objects.get(id=task_id)
+                task.notification_interval = None
+                task.save()
+                
+                from bot.handlers.utils import clear_user_state
+                clear_user_state(chat_id)
+                
+                bot.answer_callback_query(call.id, "✅ Напоминания отключены")
+                from bot.handlers.task_editing import show_task_edit_menu
+                show_task_edit_menu(call, task)
+                return
+            except Exception as e:
+                logger.error(f"Error skipping notification interval: {e}")
+                bot.answer_callback_query(call.id, "❌ Ошибка при обновлении", show_alert=True)
+                return
+
         user_state['state'] = 'waiting_assignee_selection'
         set_user_state(chat_id, user_state)
         show_assignee_selection_menu(chat_id, user_state, call)

@@ -65,8 +65,9 @@ def edit_title_callback(call: CallbackQuery) -> None:
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
         # Устанавливаем состояние пользователя для ожидания нового названия
-        from bot.handlers.utils import set_user_state
-        user_state = {'editing_task_id': task_id, 'editing_field': 'title'}
+        from bot.handlers.utils import get_user_state, set_user_state
+        user_state = get_user_state(chat_id)
+        user_state.update({'editing_task_id': task_id, 'editing_field': 'title'})
         set_user_state(chat_id, user_state)
 
     except (ValueError, ObjectDoesNotExist):
@@ -90,8 +91,9 @@ def edit_description_callback(call: CallbackQuery) -> None:
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
         # Устанавливаем состояние пользователя для ожидания нового описания
-        from bot.handlers.utils import set_user_state
-        user_state = {'editing_task_id': task_id, 'editing_field': 'description'}
+        from bot.handlers.utils import get_user_state, set_user_state
+        user_state = get_user_state(chat_id)
+        user_state.update({'editing_task_id': task_id, 'editing_field': 'description'})
         set_user_state(chat_id, user_state)
 
     except (ValueError, ObjectDoesNotExist):
@@ -108,8 +110,10 @@ def edit_assignee_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
-        from bot.handlers.utils import set_user_state
-        set_user_state(chat_id, {'editing_task_id': task_id, 'editing_field': 'assignee'})
+        from bot.handlers.utils import get_user_state, set_user_state
+        user_state = get_user_state(chat_id)
+        user_state.update({'editing_task_id': task_id, 'editing_field': 'assignee'})
+        set_user_state(chat_id, user_state)
         show_assignee_selection_page(call, task, 0)
 
     except (ValueError, ObjectDoesNotExist):
@@ -220,11 +224,12 @@ def edit_notification_interval_callback(call: CallbackQuery) -> None:
             bot.answer_callback_query(call.id, error_msg, show_alert=True)
             return
 
-        from bot.handlers.utils import set_user_state
-        set_user_state(chat_id, {'editing_task_id': task_id, 'editing_field': 'notification_interval'})
+        from bot.handlers.utils import get_user_state
+        user_state = get_user_state(chat_id)
+        user_state.update({'editing_task_id': task_id, 'editing_field': 'notification_interval'})
         
         from bot.handlers.task_creation import show_notification_selection_menu
-        show_notification_selection_menu(chat_id, {'state': 'waiting_notification_interval'}, call)
+        show_notification_selection_menu(chat_id, user_state, call)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
