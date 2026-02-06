@@ -24,7 +24,7 @@ from .task_creation import (
     back_to_assignee_type_callback, cancel_task_creation_callback,
     select_notification_interval_callback, skip_notification_interval_callback,
     back_to_calendar_callback, back_to_notifications_callback, 
-    back_to_subtasks_callback, back_to_description_callback,
+    back_to_subtasks_callback, back_to_description_callback, back_to_attachments_callback,
     confirm_cancel_task_callback, actually_cancel_task_callback, resume_task_callback
 )
 from .role_handlers import (

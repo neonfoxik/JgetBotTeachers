@@ -775,8 +775,8 @@ def confirm_cancel_task_callback(call: CallbackQuery) -> None:
     
     markup = InlineKeyboardMarkup()
     markup.add(
-        InlineKeyboardButton("✅ Да, отменить", callback_data="actually_cancel_task"),
-        InlineKeyboardButton("⬅️ Нет, продолжить", callback_data=f"resume_task_{current_state}")
+        InlineKeyboardButton("⬅️ Нет, продолжить", callback_data=f"resume_task_{current_state}"),
+        InlineKeyboardButton("✅ Да, отменить", callback_data="actually_cancel_task")
     )
     
     text = "⚠️ **ВЫ УВЕРЕНЫ?**\n\nВсе введенные данные будут потеряны. Вы действительно хотите отменить создание задачи?"
@@ -820,6 +820,13 @@ def resume_task_callback(call: CallbackQuery) -> None:
     else:
         # Универсальный возврат в начало шага, если состояние не распознано
         show_subtasks_menu(chat_id, user_state, call)
+
+def back_to_attachments_callback(call: CallbackQuery) -> None:
+    """Возврат к вложениям (ШАГ 4)"""
+    chat_id = get_chat_id_from_update(call)
+    user_state = get_user_state(chat_id)
+    if user_state:
+        show_attachments_menu(chat_id, user_state, call)
 
 def cancel_task_creation_callback(call: CallbackQuery) -> None:
     # Оставляем для совместимости, но вызываем подтверждение

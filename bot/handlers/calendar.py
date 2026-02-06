@@ -67,9 +67,15 @@ def create_calendar(year: int = None, month: int = None, is_tutorial: bool = Fal
         markup.row(*week_buttons)
 
     # Кнопки управления
-    controls = [InlineKeyboardButton("Без срока", callback_data="calendar_skip_date")]
+    controls = []
     if not is_tutorial:
-        controls.append(InlineKeyboardButton("⬅️ Отмена", callback_data="calendar_cancel"))
+        controls.append(InlineKeyboardButton("⬅️ Назад", callback_data="back_to_attachments"))
+    
+    controls.append(InlineKeyboardButton("Без срока", callback_data="calendar_skip_date"))
+    
+    if not is_tutorial:
+        controls.append(InlineKeyboardButton("❌ Отмена", callback_data="calendar_cancel"))
+        
     markup.row(*controls)
 
     text = "📅 Выберите дату выполнения задачи:"

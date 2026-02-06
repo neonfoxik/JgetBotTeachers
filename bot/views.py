@@ -14,7 +14,7 @@ from bot.handlers import (
     back_to_assignee_type_callback, cancel_task_creation_callback,
     select_notification_interval_callback, skip_notification_interval_callback,
     back_to_calendar_callback, back_to_notifications_callback,
-    back_to_subtasks_callback, back_to_description_callback,
+    back_to_subtasks_callback, back_to_description_callback, back_to_attachments_callback,
     confirm_cancel_task_callback, actually_cancel_task_callback, resume_task_callback,
     task_view_callback, task_progress_callback, task_complete_callback,
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
@@ -194,6 +194,7 @@ back_to_calendar_handler = bot.callback_query_handler(func=lambda c: c.data == "
 back_to_notifications_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_notifications")(back_to_notifications_callback)
 back_to_subtasks_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_subtasks")(back_to_subtasks_callback)
 back_to_description_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_description")(back_to_description_callback)
+back_to_attachments_handler = bot.callback_query_handler(func=lambda c: c.data == "back_to_attachments")(back_to_attachments_callback)
 
 # Callback для отмены создания задач с подтверждением
 confirm_cancel_task_handler = bot.callback_query_handler(func=lambda c: c.data == "confirm_cancel_task")(confirm_cancel_task_callback)
