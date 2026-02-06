@@ -33,7 +33,10 @@ from .role_handlers import (
 from .task_editing import (
     task_edit_callback, edit_title_callback, edit_description_callback,
     edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
-    change_assignee_callback, add_subtasks_callback, reopen_task_callback
+    change_assignee_callback, add_subtasks_callback, reopen_task_callback,
+    edit_assignee_choice_callback, edit_assignee_user_callback,
+    edit_assignee_role_callback, save_edit_role_callback,
+    edit_notifications_callback, save_edit_notify_callback
 )
 from .reports import (
     handle_task_report, view_report_attachments_callback,

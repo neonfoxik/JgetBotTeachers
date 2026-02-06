@@ -407,7 +407,7 @@ def handle_task_creation_messages(message: Message) -> None:
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton("Пропустить описание", callback_data="skip_description"))
             if not user_state.get('is_tutorial'):
-                markup.add(InlineKeyboardButton("⬅️ Отмена", callback_data="cancel_task_creation"))
+                markup.add(InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task"))
             bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
         elif state == 'waiting_task_description':
