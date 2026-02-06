@@ -20,7 +20,8 @@ from bot.handlers import (
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
     task_delete_callback, confirm_delete_callback, task_status_callback,
     task_edit_callback, edit_title_callback, edit_description_callback,
-    edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
+    edit_assignee_callback, edit_due_date_callback, edit_notification_interval_callback,
+    assignee_page_callback,
     change_assignee_callback, task_close_callback,
     handle_task_report, view_report_attachments_callback, view_task_attachments_callback,
     handle_task_comment, task_comment_callback, finish_report_callback, clear_report_attachments_callback,
@@ -226,6 +227,7 @@ edit_title_handler = bot.callback_query_handler(func=lambda c: c.data.startswith
 edit_description_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_description_"))(edit_description_callback)
 edit_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_assignee_"))(edit_assignee_callback)
 edit_due_date_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_due_date_"))(edit_due_date_callback)
+edit_notify_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_notify_"))(edit_notification_interval_callback)
 assignee_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("assignee_page_"))(assignee_page_callback)
 change_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("change_assignee_"))(change_assignee_callback)
 

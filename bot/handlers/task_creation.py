@@ -48,10 +48,13 @@ def show_notification_selection_menu(chat_id: str, user_state: dict, call: Callb
     )
     
     if not user_state.get('is_tutorial'):
-        markup.add(
-            InlineKeyboardButton("⬅️ Назад", callback_data="back_to_calendar"),
-            InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task")
-        )
+        if user_state.get('editing_field') == 'notification_interval':
+            markup.add(InlineKeyboardButton("⬅️ Назад к редактированию", callback_data=f"task_edit_{user_state.get('editing_task_id')}"))
+        else:
+            markup.add(
+                InlineKeyboardButton("⬅️ Назад", callback_data="back_to_calendar"),
+                InlineKeyboardButton("❌ Отмена", callback_data="confirm_cancel_task")
+            )
 
     if call:
         safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id, parse_mode='Markdown')
@@ -74,9 +77,29 @@ def select_notification_interval_callback(call: CallbackQuery) -> None:
                 interval = None
         
         user_state['notification_interval'] = interval
+        
+        # Если это редактирование существующей задачи
+        if user_state.get('editing_field') == 'notification_interval' and 'editing_task_id' in user_state:
+            try:
+                task_id = user_state['editing_task_id']
+                task = Task.objects.get(id=task_id)
+                task.notification_interval = interval
+                task.save()
+                
+                from bot.handlers.utils import clear_user_state
+                clear_user_state(chat_id)
+                
+                bot.answer_callback_query(call.id, "✅ Интервал уведомлений обновлен")
+                from bot.handlers.task_editing import show_task_edit_menu
+                show_task_edit_menu(call, task)
+                return
+            except Exception as e:
+                logger.error(f"Error updating notification interval: {e}")
+                bot.answer_callback_query(call.id, "❌ Ошибка при обновлении", show_alert=True)
+                return
+
         user_state['state'] = 'waiting_assignee_selection'
         set_user_state(chat_id, user_state)
-        # Увеличиваем шаг для исполнителя, так как добавили промежуточный шаг
         show_assignee_selection_menu(chat_id, user_state, call)
 
 

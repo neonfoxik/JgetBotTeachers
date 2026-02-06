@@ -26,6 +26,7 @@ def show_task_edit_menu(call: CallbackQuery, task: Task) -> None:
     markup.add(InlineKeyboardButton("📖 Описание", callback_data=f"edit_description_{task.id}"))
     markup.add(InlineKeyboardButton("👤 Исполнитель", callback_data=f"edit_assignee_{task.id}"))
     markup.add(InlineKeyboardButton("⏰ Срок", callback_data=f"edit_due_date_{task.id}"))
+    markup.add(InlineKeyboardButton("🔔 Уведомления", callback_data=f"edit_notify_{task.id}"))
     markup.add(InlineKeyboardButton("⬅️ Назад", callback_data=f"task_progress_{task.id}"))
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
 
@@ -204,6 +205,26 @@ def edit_due_date_callback(call: CallbackQuery) -> None:
         # Показываем календарь вместо текстового ввода
         from bot.handlers.calendar import show_calendar
         show_calendar(chat_id, f"task_editing_{task_id}", call.message.message_id)
+
+    except (ValueError, ObjectDoesNotExist):
+        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
+
+
+def edit_notification_interval_callback(call: CallbackQuery) -> None:
+    try:
+        task_id = int(call.data.split('_')[2])
+        task = Task.objects.get(id=task_id)
+        chat_id = get_chat_id_from_update(call)
+        allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
+        if not allowed:
+            bot.answer_callback_query(call.id, error_msg, show_alert=True)
+            return
+
+        from bot.handlers.utils import set_user_state
+        set_user_state(chat_id, {'editing_task_id': task_id, 'editing_field': 'notification_interval'})
+        
+        from bot.handlers.task_creation import show_notification_selection_menu
+        show_notification_selection_menu(chat_id, {'state': 'waiting_notification_interval'}, call)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
