@@ -18,6 +18,8 @@ from django.utils import timezone
 
 def show_notification_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню выбора интервала уведомлений"""
+    user_state['state'] = 'waiting_notification_interval'
+    set_user_state(chat_id, user_state)
     text = "🔔 **ШАГ 5.5: ОПОВЕЩЕНИЯ**\n\nВыберите, как часто бот должен присылать напоминания об этой задаче до её завершения:"
     
     markup = InlineKeyboardMarkup()
@@ -91,6 +93,8 @@ def skip_notification_interval_callback(call: CallbackQuery) -> None:
 
 def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню выбора исполнителя с кнопками: Я сам, Выбрать пользователя, Назначить роли, Отмена"""
+    user_state['state'] = 'waiting_assignee_selection'
+    set_user_state(chat_id, user_state)
     text = "👤 **ШАГ 6: ИСПОЛНИТЕЛЬ**\n\n"
     if user_state.get('is_tutorial'):
         text += "Теперь нужно выбрать, КТО будет выполнять задачу. Ты можешь назначить её **себе**, любому другому пользователю или **группе пользователей с определенной ролью**.\n\n_Нажми 'Я сам', чтобы продолжить обучение._"
@@ -115,6 +119,8 @@ def show_assignee_selection_menu(chat_id: str, user_state: dict, call: CallbackQ
 
 def show_subtasks_menu(chat_id: str, user_state: dict, call: CallbackQuery = None) -> None:
     """Показывает меню управления подзадачами"""
+    user_state['state'] = 'waiting_subtasks'
+    set_user_state(chat_id, user_state)
     subtasks = user_state.get('subtasks', [])
     
     text = "📋 **ШАГ 3: ПОДЗАДАЧИ**\n\n"
