@@ -26,7 +26,7 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
                           is_creator: bool = False, is_assignee: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
 
-    # Для завершенных задач показываем кнопки удаления, редактирования и возврата в главное меню
+    # Для завершенных задач
     if task_status == 'completed':
         markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
         if is_creator:
@@ -34,36 +34,52 @@ def get_task_actions_markup(task_id: int, task_status: str = None, report_attach
         markup.add(InlineKeyboardButton("⬅️ Назад", callback_data="main_menu"))
         return markup
 
-    btn1 = InlineKeyboardButton("📊 Прогресс", callback_data=f"task_progress_{task_id}")
-    if is_assignee and task_status in ['active', 'pending_review']:
-        if task_status == 'active':
-            if is_creator:
-                btn2 = InlineKeyboardButton("➡️ Отметить выполненной", callback_data=f"task_complete_{task_id}")
-            else:
-                btn2 = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task_id}")
-        else:
-            btn2 = InlineKeyboardButton("⏳ Ожидает проверки", callback_data=f"task_status_{task_id}")
-        markup.add(btn1, btn2)
-    elif is_creator:
+    # Кнопка прогресса нужна всем (кроме случая ниже, где она добавится парой)
+    btn_progress = InlineKeyboardButton("📊 Прогресс", callback_data=f"task_progress_{task_id}")
+    
+    # 1. Логика для Создателя
+    if is_creator:
         if task_status == 'pending_review':
             markup.add(InlineKeyboardButton("➡️ Подтвердить", callback_data=f"task_confirm_{task_id}"))
             markup.add(InlineKeyboardButton("❌ Отклонить", callback_data=f"task_reject_{task_id}"))
+        elif task_status == 'active':
+            # Если создатель сам исполнитель, он может сразу завершить
+            if is_assignee:
+                btn_complete = InlineKeyboardButton("➡️ Отметить выполненной", callback_data=f"task_complete_{task_id}")
+                markup.add(btn_progress, btn_complete)
+            else:
+                markup.add(btn_progress)
         else:
-            markup.add(btn1)
-            # Для незавершенных задач добавляем возможность добавления подзадач
-            if task_status == 'active':
-                markup.add(InlineKeyboardButton("📋 Добавить подзадачи", callback_data=f"add_subtasks_{task_id}"))
-            markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
-    else:
-        markup.add(btn1)
+             markup.add(btn_progress)
 
-    # Кнопка удаления доступна только создателю
+    # 2. Логика для Исполнителя (если он не создатель, у создателя своя верхняя логика)
+    elif is_assignee:
+        if task_status == 'active':
+            btn_close = InlineKeyboardButton("📤 Отправить на проверку", callback_data=f"task_close_{task_id}")
+            markup.add(btn_progress, btn_close)
+        elif task_status == 'pending_review':
+            btn_pending = InlineKeyboardButton("⏳ Ожидает проверки", callback_data=f"task_status_{task_id}")
+            markup.add(btn_progress, btn_pending)
+        else:
+            markup.add(btn_progress)
+    
+    # Если зашел кто-то другой (вдруг), просто прогресс
+    else:
+        markup.add(btn_progress)
+
+    # 3. Кнопки редактирования (теперь доступны и создателю, и исполнителю)
+    if task_status == 'active' and (is_creator or is_assignee):
+        markup.add(InlineKeyboardButton("📋 Добавить подзадачи", callback_data=f"add_subtasks_{task_id}"))
+        markup.add(InlineKeyboardButton("✏️ Редактировать", callback_data=f"task_edit_{task_id}"))
+
+    # 4. Удаление только для создателя
     if is_creator:
         markup.add(InlineKeyboardButton("🗑️ Удалить задачу из БД", callback_data=f"task_delete_{task_id}"))
 
+    # 5. Вложения отчета
     if report_attachments and len(report_attachments) > 0:
-        btn_attachments = InlineKeyboardButton("📎 Посмотреть вложения отчета", callback_data=f"view_report_attachments_{task_id}")
-        markup.add(btn_attachments)
+        markup.add(InlineKeyboardButton("📎 Посмотреть вложения отчета", callback_data=f"view_report_attachments_{task_id}"))
+    
     return markup
 def get_task_confirmation_markup(task_id: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
