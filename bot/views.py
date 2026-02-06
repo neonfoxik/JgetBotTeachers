@@ -19,10 +19,9 @@ from bot.handlers import (
     task_view_callback, task_progress_callback, task_complete_callback,
     task_confirm_callback, task_reject_callback, subtask_toggle_callback,
     task_delete_callback, confirm_delete_callback, task_status_callback,
+    task_edit_callback, edit_title_callback, edit_description_callback,
+    edit_assignee_callback, edit_due_date_callback, assignee_page_callback,
     change_assignee_callback, task_close_callback,
-    edit_assignee_choice_callback, edit_assignee_user_callback,
-    edit_assignee_role_callback, save_edit_role_callback,
-    edit_notifications_callback, save_edit_notify_callback,
     handle_task_report, view_report_attachments_callback, view_task_attachments_callback,
     handle_task_comment, task_comment_callback, finish_report_callback, clear_report_attachments_callback,
     tasks_back_callback, main_menu_callback, process_calendar_callback,
@@ -229,14 +228,6 @@ edit_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startsw
 edit_due_date_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_due_date_"))(edit_due_date_callback)
 assignee_page_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("assignee_page_"))(assignee_page_callback)
 change_assignee_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("change_assignee_"))(change_assignee_callback)
-
-# Новые хендлеры редактирования
-edit_assignee_choice_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_assignee_choice_"))(edit_assignee_choice_callback)
-edit_assignee_user_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_assignee_user_"))(edit_assignee_user_callback)
-edit_assignee_role_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_assignee_role_"))(edit_assignee_role_callback)
-save_edit_role_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("save_edit_role_"))(save_edit_role_callback)
-edit_notifications_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("edit_notifications_"))(edit_notifications_callback)
-save_edit_notify_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("save_edit_notify_"))(save_edit_notify_callback)
 
 # Callback для вложений
 view_report_attachments_handler = bot.callback_query_handler(func=lambda c: c.data.startswith("view_report_attachments_"))(view_report_attachments_callback)

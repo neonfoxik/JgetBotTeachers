@@ -24,8 +24,7 @@ def show_task_edit_menu(call: CallbackQuery, task: Task) -> None:
 
     markup.add(InlineKeyboardButton("📝 Название", callback_data=f"edit_title_{task.id}"))
     markup.add(InlineKeyboardButton("📖 Описание", callback_data=f"edit_description_{task.id}"))
-    markup.add(InlineKeyboardButton("👤 Исполнитель", callback_data=f"edit_assignee_choice_{task.id}"))
-    markup.add(InlineKeyboardButton("🔔 Уведомления", callback_data=f"edit_notifications_{task.id}"))
+    markup.add(InlineKeyboardButton("👤 Исполнитель", callback_data=f"edit_assignee_{task.id}"))
     markup.add(InlineKeyboardButton("⏰ Срок", callback_data=f"edit_due_date_{task.id}"))
     markup.add(InlineKeyboardButton("⬅️ Назад", callback_data=f"task_progress_{task.id}"))
     safe_edit_or_send_message(call.message.chat.id, text, reply_markup=markup, message_id=call.message.message_id)
@@ -98,27 +97,9 @@ def edit_description_callback(call: CallbackQuery) -> None:
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
 
 
-def edit_assignee_choice_callback(call: CallbackQuery) -> None:
-    """Выбор: редактировать конкретного исполнителя или роль"""
+def edit_assignee_callback(call: CallbackQuery) -> None:
     try:
-        task_id = int(call.data.split('_')[3])
-        task = Task.objects.get(id=task_id)
-        chat_id = get_chat_id_from_update(call)
-        
-        text = f"👤 РЕДАКТИРОВАНИЕ ИСПОЛНИТЕЛЯ\n\nЗадача: {task.title}\n\nВыберите тип исполнителя:"
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("👤 Конкретный пользователь", callback_data=f"edit_assignee_user_{task_id}"))
-        markup.add(InlineKeyboardButton("👥 Роль (группа)", callback_data=f"edit_assignee_role_{task_id}"))
-        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data=f"task_edit_{task_id}"))
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
-        
-    except (ValueError, ObjectDoesNotExist):
-        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
-
-def edit_assignee_user_callback(call: CallbackQuery) -> None:
-    """Редактирование конкретного исполнителя"""
-    try:
-        task_id = int(call.data.split('_')[3])
+        task_id = int(call.data.split('_')[2])
         task = Task.objects.get(id=task_id)
         chat_id = get_chat_id_from_update(call)
         allowed, error_msg = check_permissions(chat_id, task, require_creator=False)
@@ -127,105 +108,11 @@ def edit_assignee_user_callback(call: CallbackQuery) -> None:
             return
 
         from bot.handlers.utils import set_user_state
-        set_user_state(chat_id, {'editing_task_id': task_id, 'editing_field': 'assignee', 'calendar_context': f'task_editing_{task_id}'})
+        set_user_state(chat_id, {'editing_task_id': task_id, 'editing_field': 'assignee'})
         show_assignee_selection_page(call, task, 0)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
-
-def edit_assignee_role_callback(call: CallbackQuery) -> None:
-    """Редактирование роли-исполнителя"""
-    try:
-        task_id = int(call.data.split('_')[3])
-        task = Task.objects.get(id=task_id)
-        chat_id = get_chat_id_from_update(call)
-        
-        from bot.models import Role
-        roles = Role.objects.all()
-        
-        text = f"👥 ВЫБОР РОЛИ\n\nВыберите роль для задачи '{task.title}':"
-        markup = InlineKeyboardMarkup()
-        for role in roles:
-            markup.add(InlineKeyboardButton(f"{role.name}", callback_data=f"save_edit_role_{task_id}_{role.id}"))
-        
-        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data=f"edit_assignee_choice_{task_id}"))
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
-        
-    except (ValueError, ObjectDoesNotExist):
-        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
-
-def save_edit_role_callback(call: CallbackQuery) -> None:
-    """Сохранение выбранной роли"""
-    try:
-        parts = call.data.split('_')
-        task_id = int(parts[3])
-        role_id = int(parts[4])
-        
-        task = Task.objects.get(id=task_id)
-        from bot.models import Role
-        role = Role.objects.get(id=role_id)
-        
-        task.assigned_role = role
-        task.assignee = None # Сбрасываем конкретного исполнителя
-        task.save()
-        
-        bot.answer_callback_query(call.id, f"✅ Роль изменена на {role.name}")
-        show_task_edit_menu(call, task)
-        
-    except Exception as e:
-        logger.error(f"Error saving role edit: {e}")
-        bot.answer_callback_query(call.id, "Ошибка при сохранении", show_alert=True)
-
-def edit_notifications_callback(call: CallbackQuery) -> None:
-    """Редактирование интервала уведомлений"""
-    try:
-        task_id = int(call.data.split('_')[2])
-        task = Task.objects.get(id=task_id)
-        chat_id = get_chat_id_from_update(call)
-        
-        text = f"🔔 УВЕДОМЛЕНИЯ\n\nВыберите интервал напоминаний для задачи '{task.title}':"
-        markup = InlineKeyboardMarkup()
-        
-        # Кнопки как при создании
-        intervals = [
-            ("5 мин", 5), ("10 мин", 10), ("15 мин", 15),
-            ("30 мин", 30), ("1 час", 60), ("2 часа", 120),
-            ("4 часа", 240), ("12 час", 720), ("24 час", 1440)
-        ]
-        
-        row = []
-        for i, (label, val) in enumerate(intervals):
-            row.append(InlineKeyboardButton(label, callback_data=f"save_edit_notify_{task_id}_{val}"))
-            if (i + 1) % 3 == 0:
-                markup.row(*row)
-                row = []
-        if row: markup.row(*row)
-        
-        markup.add(InlineKeyboardButton("🚫 Без уведомлений", callback_data=f"save_edit_notify_{task_id}_none"))
-        markup.add(InlineKeyboardButton("⬅️ Назад", callback_data=f"task_edit_{task_id}"))
-        
-        safe_edit_or_send_message(chat_id, text, reply_markup=markup, message_id=call.message.message_id)
-        
-    except (ValueError, ObjectDoesNotExist):
-        bot.answer_callback_query(call.id, "Задача не найдена", show_alert=True)
-
-def save_edit_notify_callback(call: CallbackQuery) -> None:
-    """Сохранение интервала уведомлений"""
-    try:
-        parts = call.data.split('_')
-        task_id = int(parts[3])
-        val_str = parts[4]
-        
-        task = Task.objects.get(id=task_id)
-        task.notification_interval = None if val_str == 'none' else int(val_str)
-        task.save()
-        
-        bot.answer_callback_query(call.id, "✅ Интервал уведомлений обновлен")
-        show_task_edit_menu(call, task)
-        
-    except Exception as e:
-        logger.error(f"Error saving notify edit: {e}")
-        bot.answer_callback_query(call.id, "Ошибка при сохранении", show_alert=True)
 
 
 def show_assignee_selection_page(call: CallbackQuery, task: Task, page: int, users_per_page: int = 5) -> None:
@@ -277,12 +164,13 @@ def change_assignee_callback(call: CallbackQuery) -> None:
 
         from bot.handlers.utils import get_user_state
         user_state = get_user_state(chat_id)
-        
+        if not user_state or new_assignee_telegram_id not in user_state.get('available_users', []):
+            bot.answer_callback_query(call.id, "Пользователь не найден в списке", show_alert=True)
+            return
+
         old_assignee = task.assignee
         new_assignee = User.objects.get(telegram_id=new_assignee_telegram_id)
-        
         task.assignee = new_assignee
-        task.assigned_role = None # Очищаем роль, так как назначен конкретный пользователь
         task.save()
 
         # Уведомляем нового исполнителя
