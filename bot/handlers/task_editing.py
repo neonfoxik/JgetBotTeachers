@@ -189,7 +189,7 @@ def change_assignee_callback(call: CallbackQuery) -> None:
         from bot.handlers.utils import clear_user_state
         clear_user_state(chat_id)
 
-        text = f"➡️ Исполнитель задачи '{task.title}' изменен с {old_assignee.user_name} на {new_assignee.user_name}"
+        text = f"✅ Исполнитель задачи '{task.title}' изменен с {old_assignee.user_name} на {new_assignee.user_name}"
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
     except (ValueError, ObjectDoesNotExist):
@@ -288,7 +288,7 @@ def reopen_task_callback(call: CallbackQuery) -> None:
         task.closed_at = None
         task.save()
 
-        text = f"➡️ Задача '{task.title}' снова стала активной и доступной для редактирования"
+        text = f"✅ Задача '{task.title}' снова стала активной и доступной для редактирования"
         safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
         # Уведомляем всех исполнителей, если инициатор не единственный исполнитель

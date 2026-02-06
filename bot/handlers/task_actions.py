@@ -109,7 +109,7 @@ def task_complete_callback(call: CallbackQuery) -> None:
             task.status = 'completed'
             task.closed_at = timezone.now()
             task.save()
-            text = f"➡️ Задача '{task.title}' отмечена как выполненная!"
+            text = f"✅ Задача '{task.title}' отмечена как выполненная!"
         else:
             # Если исполнитель отправляет на проверку
             task.status = 'pending_review'
@@ -163,7 +163,7 @@ def task_confirm_callback(call: CallbackQuery) -> None:
         user = User.objects.get(telegram_id=chat_id)
         log_task_history(task, user, "Выполнение подтверждено создателем")
 
-        text = f"➡️ Задача '{task.title}' подтверждена и завершена!"
+        text = f"✅ Задача '{task.title}' подтверждена и завершена!"
 
         # Уведомляем исполнителей
         try:
