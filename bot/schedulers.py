@@ -7,8 +7,9 @@ from datetime import timedelta
 import logging
 from bot import bot
 from bot.models import Task, User
-from bot.handlers.utils import format_task_info
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from bot.handlers.utils import format_task_info, get_or_create_user
+from bot.keyboards import get_task_actions_markup
+from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
 
@@ -82,13 +83,11 @@ def send_daily_reminders():
                     for task in no_date_tasks[:5]:
                         reminder_text += f"• {task.title}\n"
 
-                reminder_text += "\n💡 Нажмите кнопку ниже для управления задачами."
-                
                 markup = InlineKeyboardMarkup()
-                markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
+                markup.add(InlineKeyboardButton("� Мои задачи", callback_data="tasks"))
                 
                 try:
-                    bot.send_message(user.telegram_id, reminder_text, parse_mode='Markdown', reply_markup=markup)
+                    bot.send_message(user.telegram_id, reminder_text, reply_markup=markup, parse_mode='Markdown')
                     logger.info(f"Sent daily reminder to user {user.telegram_id}")
                 except Exception as e:
                     logger.error(f"Failed to send reminder to user {user.telegram_id}: {e}")
@@ -115,10 +114,10 @@ def send_due_date_reminders():
                 reminder_text += format_task_info(task)
                 reminder_text += "\n\nПожалуйста, не забудьте завершить её вовремя!"
                 
-                markup = InlineKeyboardMarkup()
-                markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
+                markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+                markup.add(InlineKeyboardButton("📋 К списку задач", callback_data="tasks"))
                 
-                bot.send_message(task.assignee.telegram_id, reminder_text, parse_mode='Markdown', reply_markup=markup)
+                bot.send_message(task.assignee.telegram_id, reminder_text, reply_markup=markup, parse_mode='Markdown')
                 logger.info(f"Sent due date reminder for task {task.id} to user {task.assignee.telegram_id}")
             except Exception as e:
                 logger.error(f"Error processing due date reminder for task {task.id}: {e}")
@@ -128,13 +127,13 @@ def send_due_date_reminders():
 def send_task_specific_reminder(task_id):
     try:
         task = Task.objects.get(id=task_id, status='active')
-        reminder_text = f"🔔 **НАПОМИНАНИЕ О ЗАДАЧЕ**\n\nНапоминаем о выполнении задачи:\n\n"
+        reminder_text = f"💡 **НАПОМИНАНИЕ О ЗАДАЧЕ**\n\nНапоминаем о выполнении задачи:\n\n"
         reminder_text += format_task_info(task)
         
-        markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
+        markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+        markup.add(InlineKeyboardButton("📋 К списку задач", callback_data="tasks"))
         
-        bot.send_message(task.assignee.telegram_id, reminder_text, parse_mode='Markdown', reply_markup=markup)
+        bot.send_message(task.assignee.telegram_id, reminder_text, reply_markup=markup, parse_mode='Markdown')
         logger.info(f"Sent personal reminder for task {task.id}")
     except Task.DoesNotExist:
         logger.warning(f"Task {task_id} not found for reminder")
