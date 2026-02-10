@@ -2,7 +2,6 @@ import os
 import django
 import dotenv
 from django.db import connection
-from django.conf import settings
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -11,44 +10,32 @@ dotenv.load_dotenv()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dd.settings')
 django.setup()
 
-def check_and_fix():
-    engine = settings.DATABASES['default']['ENGINE']
-    if 'mysql' not in engine:
-        print(f"Current engine is {engine}. This script is only for MySQL.")
-        return
-
+def force_fix_tasks():
     with connection.cursor() as cursor:
-        # Check current connection charset
-        cursor.execute("SHOW VARIABLES LIKE 'character_set_connection'")
-        print(f"Current connection charset: {cursor.fetchone()[1]}")
+        print("--- ТОЧЕЧНОЕ ИСПРАВЛЕНИЕ ТАБЛИЦЫ ЗАДАЧ ---")
+        
+        # 1. Проверяем текущую кодировку колонки title
+        cursor.execute("""
+            SELECT COLUMN_NAME, CHARACTER_SET_NAME, COLLATION_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_NAME = 'bot_task' AND COLUMN_NAME = 'title'
+        """)
+        row = cursor.fetchone()
+        if row:
+            print(f"Сейчас колонка '{row[0]}' имеет кодировку: {row[1]} (сравнение: {row[2]})")
+        
+        # 2. Принудительно конвертируем всю таблицу и все её колонки
+        print("\nКонвертирую bot_task в utf8mb4...")
+        cursor.execute("ALTER TABLE bot_task DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        cursor.execute("ALTER TABLE bot_task CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+        
+        # 3. На всякий случай пройдемся по другим таблицам, где могут быть эмодзи
+        extra_tables = ['bot_subtask', 'bot_taskcomment', 'bot_taskhistory', 'bot_user']
+        for table in extra_tables:
+            print(f"Конвертирую {table}...")
+            cursor.execute(f"ALTER TABLE {table} CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
 
-        # Get database name
-        cursor.execute("SELECT DATABASE()")
-        db_name = cursor.fetchone()[0]
-        
-        print(f"Working on database: {db_name}")
-        
-        # 1. Fix Database
-        print(f"Converting database {db_name}...")
-        cursor.execute(f"ALTER DATABASE `{db_name}` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci")
-        
-        # 2. Fix Tables
-        cursor.execute("SHOW TABLES")
-        tables = [row[0] for row in cursor.fetchall()]
-        
-        for table in tables:
-            print(f"Converting table {table}...")
-            try:
-                # CONVERT TO changes the table AND all its columns
-                cursor.execute(f"ALTER TABLE `{table}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-            except Exception as e:
-                print(f"Error converting table {table}: {e}")
-                
-        print("\nSUCCESS! Database and all tables/columns converted to utf8mb4.")
-        print("IMPORTANT: You MUST restart your bot process to apply changes in settings.py.")
+        print("\n✅ ГОТОВО! Все текстовые колонки теперь поддерживают эмодзи.")
 
 if __name__ == "__main__":
-    try:
-        check_and_fix()
-    except Exception as e:
-        print(f"Critical error: {e}")
+    force_fix_tasks()
