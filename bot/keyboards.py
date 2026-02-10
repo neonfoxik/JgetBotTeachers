@@ -148,4 +148,6 @@ def get_tasks_list_markup(tasks, is_creator_view: bool = False) -> InlineKeyboar
             btn_text,
             callback_data=f"task_view_{task.id}_{'creator' if is_creator_view else 'assignee'}"
         ))
+    
+    markup.add(InlineKeyboardButton("🏠 В меню", callback_data="main_menu"))
     return markup

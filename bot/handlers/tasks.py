@@ -58,7 +58,7 @@ def my_created_tasks_callback(call: CallbackQuery) -> None:
             bot.edit_message_text(
                 chat_id=call.message.chat.id,
                 text="📋 Вы еще не создали ни одной задачи",
-                reply_markup=TASK_MANAGEMENT_MARKUP,
+                reply_markup=UNIVERSAL_BUTTONS,
                 message_id=call.message.message_id
             )
             return
@@ -91,7 +91,7 @@ def my_created_tasks_command_logic(update) -> None:
     created_tasks = Task.objects.filter(creator=user).order_by('-created_at')
     if not created_tasks:
         text = "📋 Вы еще не создали ни одной задачи"
-        markup = TASK_MANAGEMENT_MARKUP
+        markup = UNIVERSAL_BUTTONS
     else:
         text = f"📋 ЗАДАЧИ, СОЗДАННЫЕ ВАМИ\n\n"
         markup = get_tasks_list_markup(created_tasks, is_creator_view=True)

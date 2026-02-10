@@ -86,7 +86,8 @@ def tasks_command_logic(update) -> None:
 
     if not active_tasks:
         text = "📋 У вас нет активных задач"
-        markup = TASK_MANAGEMENT_MARKUP
+        from bot.keyboards import UNIVERSAL_BUTTONS
+        markup = UNIVERSAL_BUTTONS
     else:
         text = f"📋 ВАШИ АКТИВНЫЕ ЗАДАЧИ\n\n"
         markup = get_tasks_list_markup(active_tasks, is_creator_view=False)
