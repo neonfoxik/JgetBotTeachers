@@ -406,7 +406,7 @@ def create_task_progress_markup(task: Task, is_creator: bool, is_assignee: bool)
 
     # Комментарии
     markup.add(InlineKeyboardButton("💬 Написать комментарий", callback_data=f"task_comment_{task.id}"))
-    markup.add(InlineKeyboardButton("🏠 В меню", callback_data="main_menu"))
+    markup.add(InlineKeyboardButton("⬅️ В меню", callback_data="main_menu"))
 
     return markup
 
