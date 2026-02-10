@@ -263,7 +263,7 @@ def create_task_from_state(chat_id: str, user_state: dict, message_id: int = Non
             log_task_history(task, creator, "Задача создана")
             logger.info(f"Задача {task.id} успешно создана и история записана.")
 
-            success_msg = f"➡️ Задача '{task.title}' успешно создана!\n\n"
+            success_msg = f"✅ Задача '{task.title}' успешно создана!\n\n"
             
             # Информация об исполнителе/роли
             if assigned_role:
@@ -396,11 +396,11 @@ def handle_task_creation_messages(message: Message) -> None:
                         return
                     task.title = message.text.strip()
                     task.save()
-                    bot.send_message(message.chat.id, f"➡️ Название задачи #{task_id} изменено")
+                    bot.send_message(message.chat.id, f"✅ Название задачи #{task_id} изменено")
                 elif field == 'description':
                     task.description = message.text.strip()
                     task.save()
-                    bot.send_message(message.chat.id, f"➡️ Описание задачи #{task_id} изменено")
+                    bot.send_message(message.chat.id, f"✅ Описание задачи #{task_id} изменено")
                 
                 # Очищаем состояние
                 clear_user_state(chat_id)
@@ -495,7 +495,7 @@ def handle_task_creation_messages(message: Message) -> None:
                     else:
                         user_state['description'] = message.caption
                 
-                bot.send_message(message.chat.id, "➡️ Фото добавлено. Вы можете прикрепить еще или нажать 'Далее'.")
+                bot.send_message(message.chat.id, "✅ Фото добавлено. Вы можете прикрепить еще или нажать 'Далее'.")
             elif message.document:
                 attachments.append({
                     'type': 'document',

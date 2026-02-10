@@ -90,7 +90,7 @@ def handle_task_report(message: Message) -> None:
         notify_creator_about_report(active_task)
 
         clear_user_state(chat_id)
-        bot.send_message(message.chat.id, "➡️ Отчет успешно отправлен создателю для проверки", reply_markup=get_main_menu(user))
+        bot.send_message(message.chat.id, "✅ Отчет успешно отправлен создателю для проверки", reply_markup=get_main_menu(user))
 
     except Exception as e:
         logger.error(f"Ошибка при отправке отчета: {e}")
@@ -123,7 +123,7 @@ def finish_report_callback(call: CallbackQuery) -> None:
         notify_creator_about_report(task)
         
         clear_user_state(chat_id)
-        bot.edit_message_text("➡️ Отчет успешно отправлен!", chat_id, call.message.message_id)
+        bot.edit_message_text("✅ Отчет успешно отправлен!", chat_id, call.message.message_id)
         user = get_or_create_user(chat_id)
         bot.send_message(chat_id, "Вы вернулись в главное меню", reply_markup=get_main_menu(user))
         
@@ -216,7 +216,7 @@ def handle_task_comment(message: Message) -> None:
             text=message.text.strip()
         )
         
-        bot.send_message(chat_id, "➡️ Комментарий добавлен!")
+        bot.send_message(chat_id, "✅ Комментарий добавлен!")
         clear_user_state(chat_id)
         
         # Уведомляем о комментарии согласно логике

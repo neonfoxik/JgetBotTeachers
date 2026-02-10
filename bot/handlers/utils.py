@@ -236,7 +236,7 @@ def format_task_info(task: Task, show_details: bool = False) -> str:
     status_text = {
         'active': '🔄 Активная',
         'pending_review': '⏳ Ожидает подтверждения',
-        'completed': '➡️ Завершена',
+        'completed': '✅ Завершена',
         'cancelled': '❌ Отменена'
     }.get(task.status, '❓ Неизвестный статус')
 

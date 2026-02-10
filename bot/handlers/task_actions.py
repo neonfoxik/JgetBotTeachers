@@ -251,7 +251,7 @@ def subtask_toggle_callback(call: CallbackQuery) -> None:
 
         # Показываем уведомление о переключении
         status_text = "выполнена" if subtask.is_completed else "не выполнена"
-        bot.answer_callback_query(call.id, f"➡️ Подзадача отмечена как {status_text}", show_alert=False)
+        bot.answer_callback_query(call.id, f"✅ Подзадача отмечена как {status_text}", show_alert=False)
 
     except (ValueError, ObjectDoesNotExist):
         bot.answer_callback_query(call.id, "Подзадача не найдена", show_alert=True)
@@ -305,7 +305,7 @@ def confirm_delete_callback(call: CallbackQuery) -> None:
         task_title = task.title
         try:
             task.delete()
-            text = f"➡️ Задача '{task_title}' успешно удалена из базы данных"
+            text = f"✅ Задача '{task_title}' успешно удалена из базы данных"
             safe_edit_or_send_message(call.message.chat.id, text, reply_markup=TASK_MANAGEMENT_MARKUP, message_id=call.message.message_id)
 
             # Подтверждаем callback
