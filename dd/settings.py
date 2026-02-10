@@ -103,7 +103,6 @@ else:
             'OPTIONS': {
                 'charset': 'utf8mb4',
                 'use_unicode': True,
-                'init_command': "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, sql_mode='STRICT_TRANS_TABLES'",
             }
         }
     }
