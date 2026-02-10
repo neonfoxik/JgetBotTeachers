@@ -3,7 +3,7 @@ from django.utils import timezone
 from bot.models import Task, User
 from bot import bot, logger
 from bot.handlers.utils import format_task_info
-from bot.keyboards import get_task_actions_markup
+from bot.keyboards import get_task_actions_markup, InlineKeyboardButton
 
 class Command(BaseCommand):
     help = 'Проверка и отправка напоминаний о задачах (однократный запуск через крон)'
@@ -49,6 +49,7 @@ class Command(BaseCommand):
 
         reminder_text = f"💡 **НАПОМИНАНИЕ О ЗАДАЧЕ**\n{deadline_notice}\n{format_task_info(task)}"
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments, False, True)
+        markup.add(InlineKeyboardButton("📋 К списку задач", callback_data="tasks"))
         
         from bot.handlers.utils import send_task_notification
         for user in assignees:

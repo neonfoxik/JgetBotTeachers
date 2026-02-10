@@ -60,8 +60,12 @@ class Command(BaseCommand):
                     summary_text += f"⚠️ Просрочены: {overdue}\n\n"
                     summary_text += "Удачного рабочего дня! 💪"
                     
+                    from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+                    markup = InlineKeyboardMarkup()
+                    markup.add(InlineKeyboardButton("📋 Мои задачи", callback_data="tasks"))
+                    
                     # Отправляем уведомление
-                    sent = send_task_notification(user.telegram_id, summary_text)
+                    sent = send_task_notification(user.telegram_id, summary_text, reply_markup=markup)
                     
                     if sent:
                         user.last_summary_sent_at = today_date
