@@ -339,9 +339,6 @@ def task_status_callback(call: CallbackQuery) -> None:
 
         status_info = f"📊 Статус задачи\n\n{format_task_info(task, show_details=True)}"
 
-        if task.status == 'pending_review' and task.report_text:
-            status_info += f"\n📄 Отчет исполнителя:\n{task.report_text}"
-
         markup = get_task_actions_markup(task.id, task.status, task.report_attachments,
                                        task.creator.telegram_id == chat_id,
                                        task.has_access(get_or_create_user(chat_id)))
